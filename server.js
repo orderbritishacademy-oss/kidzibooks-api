@@ -6,17 +6,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ OpenAI client (key comes from Render ENV)
+// ✅ OpenAI client (API key from Render Environment)
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Health check
+// 🔹 Health check
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
 
-// ✅ AI Question Generator
+// 🔹 AI Question Paper Generator (QUESTIONS ONLY)
 app.post("/api/generate", async (req, res) => {
   try {
     const { topic, difficulty, type, count } = req.body;
@@ -28,20 +28,47 @@ app.post("/api/generate", async (req, res) => {
       });
     }
 
-    const prompt = `
-Create a school-level question paper.
+    let prompt = "";
+
+    // ⭐ SPECIAL CASE: ALL → each type = count
+    if (type === "ALL") {
+      prompt = `
+Create a SCHOOL EXAM QUESTION PAPER.
+
+Topic: ${topic}
+Difficulty: ${difficulty}
+
+IMPORTANT RULES:
+- Generate ONLY QUESTIONS
+- DO NOT include answers
+- Proper exam format
+- Clear section headings
+- Student-friendly language
+
+Create the following sections with ${count} QUESTIONS EACH:
+
+SECTION A: MCQs
+SECTION B: True / False
+SECTION C: Fill in the Blanks
+SECTION D: Match the Following
+`;
+    } else {
+      // ⭐ SINGLE TYPE
+      prompt = `
+Create a SCHOOL EXAM QUESTION PAPER.
 
 Topic: ${topic}
 Difficulty: ${difficulty}
 Question Type: ${type}
 Number of Questions: ${count}
 
-Rules:
-- Use simple language
-- Suitable for students
-- Provide answers
-- Format clearly
+IMPORTANT RULES:
+- Generate ONLY QUESTIONS
+- DO NOT include answers
+- Proper exam format
+- Student-friendly language
 `;
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -61,7 +88,6 @@ Rules:
 
   } catch (error) {
     console.error("OpenAI Error:", error.message);
-
     res.status(500).json({
       success: false,
       message: "AI generation failed"
@@ -69,7 +95,8 @@ Rules:
   }
 });
 
+// 🔹 Server start
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log("Server running on port", PORT)
-);
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
