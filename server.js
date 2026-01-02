@@ -6,31 +6,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ OpenAI client (API key from Render Environment)
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// 🔹 Health check
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
 
-// 🔹 AI Question Paper Generator (QUESTIONS ONLY)
 app.post("/api/generate", async (req, res) => {
   try {
     const { topic, difficulty, type, count } = req.body;
 
     if (!topic || !difficulty || !type || !count) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields"
-      });
+      return res.status(400).json({ success: false });
     }
 
     let prompt = "";
 
-    // ⭐ SPECIAL CASE: ALL → each type = count
     if (type === "ALL") {
       prompt = `
 Create a SCHOOL EXAM QUESTION PAPER.
@@ -38,22 +31,32 @@ Create a SCHOOL EXAM QUESTION PAPER.
 Topic: ${topic}
 Difficulty: ${difficulty}
 
-IMPORTANT RULES:
-- Generate ONLY QUESTIONS
-- DO NOT include answers
-- Proper exam format
-- Clear section headings
+IMPORTANT INSTRUCTIONS:
+- Use clear SECTION headings
+- Proper question numbering
 - Student-friendly language
+- DO NOT mix answers with questions
+- Add a separate ANSWER KEY at the end
 
-Create the following sections with ${count} QUESTIONS EACH:
+Generate ${count} questions in EACH section below:
 
-SECTION A: MCQs
-SECTION B: True / False
-SECTION C: Fill in the Blanks
-SECTION D: Match the Following
+SECTION A: MCQs  
+SECTION B: True / False  
+SECTION C: Fill in the Blanks  
+SECTION D: Match the Following  
+SECTION E: Descriptive Questions  
+
+DESCRIPTIVE QUESTIONS RULES:
+- Include short and long answer questions
+- Use words like "Explain", "Describe", "Write a short note", "Why"
+- Suitable for school exams
+
+MATCH THE FOLLOWING FORMAT:
+- Column A (a, b, c, d)
+- Column B (1, 2, 3, 4)
+- Answer format: a-2, b-1, etc.
 `;
     } else {
-      // ⭐ SINGLE TYPE
       prompt = `
 Create a SCHOOL EXAM QUESTION PAPER.
 
@@ -62,41 +65,33 @@ Difficulty: ${difficulty}
 Question Type: ${type}
 Number of Questions: ${count}
 
-IMPORTANT RULES:
-- Generate ONLY QUESTIONS
-- DO NOT include answers
-- Proper exam format
+INSTRUCTIONS:
+- Proper numbering
 - Student-friendly language
+- Do NOT mix answers with questions
+- Add a separate ANSWER KEY at the end
 `;
     }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are an experienced school teacher." },
+        { role: "system", content: "You are a professional school exam paper setter." },
         { role: "user", content: prompt }
       ],
-      temperature: 0.7
+      temperature: 0.6
     });
-
-    const result = completion.choices[0].message.content;
 
     res.json({
       success: true,
-      result
+      result: completion.choices[0].message.content
     });
 
-  } catch (error) {
-    console.error("OpenAI Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "AI generation failed"
-    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
   }
 });
 
-// 🔹 Server start
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+app.listen(PORT, () => console.log("Server running on", PORT));
