@@ -51,22 +51,10 @@ DESCRIPTIVE QUESTIONS RULES:
 - Use words like "Explain", "Describe", "Write a short note", "Why"
 - Suitable for school exams
 
-MATCH THE FOLLOWING FORMAT (FOLLOW STRICTLY):
-
-- Show a heading: "SECTION D: Match the Following"
-- Show instruction line: "Match the items in Column A with Column B."
-- Display two columns using plain text spacing:
-
-Column A                     Column B
-a) Item from Column A        1) Item from Column B
-b) Item from Column A        2) Item from Column B
-c) Item from Column A        3) Item from Column B
-d) Item from Column A        4) Item from Column B
-
-- Do NOT use bullets, markdown, or symbols
-- Do NOT show answers with questions
-- In the ANSWER KEY section, show answers like:
-  a-4, b-2, c-3, d-1
+MATCH THE FOLLOWING FORMAT:
+- Column A (a, b, c, d)
+- Column B (1, 2, 3, 4)
+- Answer format: a-2, b-1, etc.
 `;
     } else {
       prompt = `
@@ -86,7 +74,6 @@ INSTRUCTIONS:
 - DO NOT use #, ##, ###, *, **, ---, ___, bullets
 - Use ONLY plain text
 - Use normal numbering: 1, 2, 3
-- Use SECTION A, SECTION B (no symbols)
 `;
     }
 
