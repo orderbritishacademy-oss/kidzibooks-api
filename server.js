@@ -52,8 +52,7 @@ DESCRIPTIVE QUESTIONS RULES:
 - Suitable for school exams
 
 MATCH THE FOLLOWING FORMAT:
-- Column A (a, b, c, d)
-- Column B (1, 2, 3, 4)
+- Column A (a, b, c, d)   Column B (1, 2, 3, 4)
 - Answer format: a-2, b-1, etc.
 `;
     } else {
@@ -70,6 +69,11 @@ INSTRUCTIONS:
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
+
+- DO NOT use #, ##, ###, *, **, ---, ___, bullets
+- Use ONLY plain text
+- Use normal numbering: 1, 2, 3
+- Use SECTION A, SECTION B (no symbols)
 `;
     }
 
