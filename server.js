@@ -32,11 +32,12 @@ Topic: ${topic}
 Difficulty: ${difficulty}
 
 IMPORTANT INSTRUCTIONS:
-- Use clear SECTION headings
+- Use clear SECTION headings with bold
 - Proper question numbering
 - Student-friendly language
 - DO NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
+- MATCH show in two column1 and column2
 
 Generate ${count} questions in EACH section below:
 
@@ -70,6 +71,7 @@ INSTRUCTIONS:
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
+- MATCH show in two column1 and column2
 
 - DO NOT use #, ##, ###, *, **, ---, ___, bullets
 - Use ONLY plain text
