@@ -26,7 +26,6 @@ app.post("/api/generate", async (req, res) => {
 
     if (type === "ALL") {
       prompt = `
-Create a SCHOOL EXAM QUESTION PAPER.
 
 Topic: ${topic}
 Difficulty: ${difficulty}
@@ -59,7 +58,6 @@ MATCH THE FOLLOWING FORMAT:
 `;
     } else {
       prompt = `
-Create a SCHOOL EXAM QUESTION PAPER.
 
 Topic: ${topic}
 Difficulty: ${difficulty}
