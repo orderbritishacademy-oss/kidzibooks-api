@@ -26,19 +26,24 @@ app.post("/api/generate", async (req, res) => {
 
     if (type === "ALL") {
       prompt = `
-Create a student-level question paper on the topic "${topic}".
+Create a student-level question paper.
 
-IMPORTANT RULES (FOLLOW STRICTLY):
+IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
 - Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Use clear SECTION headings (plain text only)
+- Show the topic name at the top in UPPERCASE
+- Use clear SECTION headings (plain text)
 - Proper question numbering (1, 2, 3)
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
-- For Match the Following, show two columns clearly
+- For Match the Following, show two clear columns
 
-Generate ${count} questions in EACH section:
+Start the paper EXACTLY like this:
+
+QUESTION PAPER – ${topic.toUpperCase()}
+
+Then generate ${count} questions in EACH section:
 
 SECTION A: MCQs
 SECTION B: True / False
@@ -62,24 +67,28 @@ d) Item from Column A        4) Item from Column B
 `;
     } else {
       prompt = `
-Create student-level ${type} questions on the topic "${topic}".
+Create a student-level question paper.
 
-IMPORTANT RULES (FOLLOW STRICTLY):
+IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
 - Do NOT use #, ##, ###, *, **, ---, ___, bullets
+- Show the topic name at the top in UPPERCASE
 - Always start with a SECTION heading
 - Proper numbering (1, 2, 3)
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
 
-Start EXACTLY with this heading:
+Start the paper EXACTLY like this:
+
+QUESTION PAPER – ${topic.toUpperCase()}
 
 SECTION: ${type}
 
 Then generate ${count} questions under this section.
 `;
     }
+
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
