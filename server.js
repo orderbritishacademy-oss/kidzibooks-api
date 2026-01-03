@@ -26,54 +26,58 @@ app.post("/api/generate", async (req, res) => {
 
     if (type === "ALL") {
       prompt = `
+Create a student-level question paper on the topic "${topic}".
 
-Topic: ${topic}
-Difficulty: ${difficulty}
-
-IMPORTANT INSTRUCTIONS:
-- Use clear SECTION headings with bold
-- Proper question numbering
-- Student-friendly language
-- DO NOT mix answers with questions
-- Add a separate ANSWER KEY at the end
-- MATCH show in two column1 and column2
-
-Generate ${count} questions in EACH section below:
-
-SECTION A: MCQs  
-SECTION B: True / False  
-SECTION C: Fill in the Blanks  
-SECTION D: Match the Following  
-SECTION E: Descriptive Questions  
-
-DESCRIPTIVE QUESTIONS RULES:
-- Include short and long answer questions
-- Use words like "Explain", "Describe", "Write a short note", "Why"
-- Suitable for school exams
-
-MATCH THE FOLLOWING FORMAT:
-- Column A (a, b, c, d)
-- Column B (1, 2, 3, 4)
-- Answer format: a-2, b-1, etc.
-`;
-    } else {
-      prompt = `
-
-Topic: ${topic}
-Difficulty: ${difficulty}
-Question Type: ${type}
-Number of Questions: ${count}
-
-INSTRUCTIONS:
-- Proper numbering
+IMPORTANT RULES (FOLLOW STRICTLY):
+- Use ONLY plain text
+- Do NOT use #, ##, ###, *, **, ---, ___, bullets
+- Use clear SECTION headings (plain text only)
+- Proper question numbering (1, 2, 3)
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
-- MATCH show in two column1 and column2
+- For Match the Following, show two columns clearly
 
-- DO NOT use #, ##, ###, *, **, ---, ___, bullets
+Generate ${count} questions in EACH section:
+
+SECTION A: MCQs
+SECTION B: True / False
+SECTION C: Fill in the Blanks
+SECTION D: Match the Following
+SECTION E: Descriptive Questions
+
+DESCRIPTIVE QUESTIONS RULES:
+- Use Explain, Describe, Why, Write a short note
+- Mix short and long answer questions
+
+MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
+
+Match the items in Column A with Column B.
+
+Column A                     Column B
+a) Item from Column A        1) Item from Column B
+b) Item from Column A        2) Item from Column B
+c) Item from Column A        3) Item from Column B
+d) Item from Column A        4) Item from Column B
+`;
+    } else {
+      prompt = `
+Create student-level ${type} questions on the topic "${topic}".
+
+IMPORTANT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
-- Use normal numbering: 1, 2, 3
+- Do NOT use #, ##, ###, *, **, ---, ___, bullets
+- Always start with a SECTION heading
+- Proper numbering (1, 2, 3)
+- Student-friendly language
+- Do NOT mix answers with questions
+- Add a separate ANSWER KEY at the end
+
+Start EXACTLY with this heading:
+
+SECTION: ${type}
+
+Then generate ${count} questions under this section.
 `;
     }
 
