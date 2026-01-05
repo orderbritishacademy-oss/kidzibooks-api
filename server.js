@@ -16,9 +16,9 @@ app.get("/", (req, res) => {
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { topic, difficulty, type, count } = req.body;
+    const { studentClass, topic, difficulty, type, count } = req.body;
 
-    if (!topic || !difficulty || !type || !count) {
+    if (!studentClass || !topic || !difficulty || !type || !count) {
       return res.status(400).json({ success: false });
     }
 
@@ -27,6 +27,7 @@ app.post("/api/generate", async (req, res) => {
     if (type === "ALL") {
       prompt = `
 Create a student-level question paper.
+Class: ${studentClass}
 
 IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
@@ -68,6 +69,7 @@ d) Item from Column A        4) Item from Column B
     } else {
       prompt = `
 Create a student-level question paper.
+Class: ${studentClass}
 
 IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
