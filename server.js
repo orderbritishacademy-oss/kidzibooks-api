@@ -2,27 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-// ✅ NEW: Rate limiter protection
-const rateLimit = require("express-rate-limit");
-
-// ✅ NEW: In-memory cache
-const cache = new Map();
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// ✅ NEW: API protection (5 requests per minute per user)
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  message: {
-    success: false,
-    error: "Too many requests. Please wait 1 minute."
-  }
-});
-
-app.use("/api/", apiLimiter);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -38,18 +20,6 @@ app.post("/api/generate", async (req, res) => {
 
     if (!topic || !difficulty || !type || !count) {
       return res.status(400).json({ success: false });
-    }
-
-    // ✅ NEW: Cache key
-    const cacheKey = `${topic}-${difficulty}-${type}-${count}`;
-
-    // ✅ NEW: Serve from cache if exists
-    if (cache.has(cacheKey)) {
-      console.log("⚡ Serving from cache");
-      return res.json({
-        success: true,
-        result: cache.get(cacheKey)
-      });
     }
 
     let prompt = "";
@@ -119,37 +89,24 @@ Then generate ${count} questions under this section.
 `;
     }
 
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: "You are a professional school exam paper setter." },
         { role: "user", content: prompt }
       ],
-      temperature: 0.6,
-
-      // ✅ NEW: Token safety limit
-      max_tokens: 1200
+      temperature: 0.6
     });
-
-    // ✅ NEW: Save output safely
-    const output = completion.choices[0].message.content;
-
-    // ✅ NEW: Store in cache
-    cache.set(cacheKey, output);
 
     res.json({
       success: true,
-      result: output
+      result: completion.choices[0].message.content
     });
 
   } catch (err) {
-    console.error("AI ERROR:", err);
-
-    // ✅ NEW: Friendly error message
-    res.status(500).json({
-      success: false,
-      error: "AI temporarily busy. Please try again after 1 minute."
-    });
+    console.error(err);
+    res.status(500).json({ success: false });
   }
 });
 
