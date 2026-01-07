@@ -1,14 +1,17 @@
 const express = require("express");
 const cors = require("cors");
-const OpenAI = require("openai");
+require("dotenv").config();
+
+// ✅ NEW: Gemini SDK
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// ✅ NEW: Gemini client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
@@ -50,20 +53,6 @@ SECTION B: True / False
 SECTION C: Fill in the Blanks
 SECTION D: Match the Following
 SECTION E: Descriptive Questions
-
-DESCRIPTIVE QUESTIONS RULES:
-- Use Explain, Describe, Why, Write a short note
-- Mix short and long answer questions
-
-MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
-
-Match the items in Column A with Column B.
-
-Column A                     Column B
-a) Item from Column A        1) Item from Column B
-b) Item from Column A        2) Item from Column B
-c) Item from Column A        3) Item from Column B
-d) Item from Column A        4) Item from Column B
 `;
     } else {
       prompt = `
@@ -89,24 +78,23 @@ Then generate ${count} questions under this section.
 `;
     }
 
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a professional school exam paper setter." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.6
-    });
+    // ✅ NEW: Gemini request
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
     res.json({
       success: true,
-      result: completion.choices[0].message.content
+      result: text
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    console.error("Gemini Error:", err.message);
+
+    res.status(500).json({
+      success: false,
+      error: "Free API limit reached or network issue. Try again later."
+    });
   }
 });
 
