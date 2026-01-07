@@ -89,24 +89,32 @@ Then generate ${count} questions under this section.
 `;
     }
 
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a professional school exam paper setter." },
-        { role: "user", content: prompt }
+    // ✅ UPDATED OPENAI API (ONLY THIS PART CHANGED)
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
+        {
+          role: "system",
+          content: "You are a professional school exam paper setter."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
       ],
       temperature: 0.6
     });
 
+    const output = response.output_text;
+
     res.json({
       success: true,
-      result: completion.choices[0].message.content
+      result: output
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    console.error("OPENAI ERROR:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
