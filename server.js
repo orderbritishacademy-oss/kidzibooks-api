@@ -2,16 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-/* ✅ NEW IMPORTS (ADDED) */
-const path = require("path");
-const multer = require("multer");
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-/* ✅ PUBLIC UPLOADS FOLDER (ADDED) */
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -122,51 +115,6 @@ Then generate ${count} questions under this section.
   } catch (err) {
     console.error("OPENAI ERROR:", err);
     res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-/* ======================================================
-   ✅ PDF UPLOAD CONFIGURATION (ADDED)
-====================================================== */
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
-      cb(null, true);
-    } else {
-      cb(new Error("Only PDF files allowed"), false);
-    }
-  }
-});
-
-/* ======================================================
-   ✅ PDF UPLOAD API ENDPOINT (ADDED)
-====================================================== */
-
-app.post("/api/upload-pdf", upload.single("pdf"), (req, res) => {
-  try {
-    const pdfURL = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-
-    res.json({
-      success: true,
-      pdfURL,
-      fileName: req.file.originalname
-    });
-
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    res.status(500).json({ success: false });
   }
 });
 
