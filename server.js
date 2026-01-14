@@ -146,6 +146,12 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
     const fileUrl = `/uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
+    // 🔥 delete old file if exists
+    if (exams.length > 0) {
+      const oldPath = path.join(__dirname, exams[0].url);
+      fs.unlink(oldPath, () => {});
+    }
+
     const exam = {
       id: Date.now(),
       name: req.file.originalname,
@@ -154,7 +160,8 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
       answers: meta.answers || {}
     };
 
-    exams.push(exam);
+    // 🔥 keep only ONE exam
+    exams = [exam];
 
     res.json({ success: true, exam });
 
@@ -164,6 +171,7 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
   }
 });
 
+
 /* ================= ✅ GET ALL EXAMS ================= */
 
 app.get("/api/exams", (req, res) => {
@@ -172,18 +180,14 @@ app.get("/api/exams", (req, res) => {
 
 /* ================= ✅ DELETE EXAM ================= */
 
-app.delete("/api/deleteExam/:id", (req, res) => {
-  const id = Number(req.params.id);
+app.delete("/api/deleteExam", (req, res) => {
 
-  const exam = exams.find(e => e.id === id);
-
-  if (exam) {
-    const filePath = path.join(__dirname, exam.url);
+  if (exams.length > 0) {
+    const filePath = path.join(__dirname, exams[0].url);
     fs.unlink(filePath, () => {});
   }
 
-  exams = exams.filter(e => e.id !== id);
-
+  exams = [];
   res.json({ success: true });
 });
 
