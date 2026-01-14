@@ -152,6 +152,9 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
       answers: meta.answers || {}
     };
 
+    console.log("✅ Questions:", currentExam.questions.length);
+    console.log("✅ Answers:", Object.keys(currentExam.answers).length);
+
     res.json({ success: true, exam: currentExam });
 
   } catch (err) {
