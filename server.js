@@ -1,8 +1,9 @@
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-/* ✅ PDF UPLOAD */
+/* ✅ NEW FOR PDF UPLOAD */
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -19,7 +20,7 @@ const openai = new OpenAI({
 
 /* ================= PDF STORAGE ================= */
 
-const uploadDir = path.join(__dirname, "uploads");
+const uploadDir = "uploads";
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
@@ -31,8 +32,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* 🔥 ONLY ONE EXAM STORAGE */
-let exams = [];
+let currentExam = null; // 🔥 shared for all students
 
 /* ================= TEST ================= */
 
@@ -78,6 +78,20 @@ SECTION B: True / False
 SECTION C: Fill in the Blanks
 SECTION D: Match the Following
 SECTION E: Descriptive Questions
+
+DESCRIPTIVE QUESTIONS RULES:
+- Use Explain, Describe, Why, Write a short note
+- Mix short and long answer questions
+
+MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
+
+Match the items in Column A with Column B.
+
+Column A                     Column B
+a) Item from Column A        1) Item from Column B
+b) Item from Column A        2) Item from Column B
+c) Item from Column A        3) Item from Column B
+d) Item from Column A        4) Item from Column B
 `;
     } else {
       prompt = `
@@ -114,7 +128,10 @@ Then generate ${count} questions under this section.
 
     const output = response.output_text;
 
-    res.json({ success: true, result: output });
+    res.json({
+      success: true,
+      result: output
+    });
 
   } catch (err) {
     console.error("OPENAI ERROR:", err);
@@ -122,37 +139,24 @@ Then generate ${count} questions under this section.
   }
 });
 
-/* ================= ✅ UPLOAD EXAM ================= */
+/* ================= ✅ TEACHER UPLOAD PDF ================= */
 
 app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, msg: "No file uploaded" });
-    }
-
     const fileUrl = `/uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
-    // 🔥 DELETE OLD FILE IF EXISTS
-    if (exams.length > 0 && exams[0].url) {
-      const oldPath = path.join(__dirname, exams[0].url);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-    }
-
-    const exam = {
-      id: Date.now(),
+    currentExam = {
       name: req.file.originalname,
       url: fileUrl,
       questions: meta.questions || [],
       answers: meta.answers || {}
     };
 
-    // 🔥 KEEP ONLY ONE EXAM
-    exams = [exam];
+    console.log("✅ Questions:", currentExam.questions.length);
+    console.log("✅ Answers:", Object.keys(currentExam.answers).length);
 
-    res.json({ success: true, exam });
+    res.json({ success: true, exam: currentExam });
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -160,35 +164,15 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
   }
 });
 
-/* ================= ✅ GET EXAMS ================= */
+/* ================= ✅ STUDENT GET CURRENT EXAM ================= */
 
-app.get("/api/exams", (req, res) => {
-  res.json(exams);
+app.get("/api/currentExam", (req, res) => {
+  res.json(currentExam);
 });
 
-/* ================= ✅ DELETE EXAM ================= */
+/* ================= ✅ SERVE PDF FILE ================= */
 
-app.delete("/api/deleteExam", (req, res) => {
-  try {
-    if (exams.length > 0 && exams[0].url) {
-      const filePath = path.join(__dirname, exams[0].url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    exams = [];
-    res.json({ success: true });
-
-  } catch (err) {
-    console.error("DELETE ERROR:", err);
-    res.status(500).json({ success: false });
-  }
-});
-
-/* ================= SERVE PDF ================= */
-
-app.use("/uploads", express.static(uploadDir));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* ================= SERVER ================= */
 
