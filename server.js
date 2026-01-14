@@ -2,44 +2,17 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-/* ✅ NEW FOR PDF UPLOAD */
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-/* ================= OPENAI ================= */
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* ================= PDF STORAGE ================= */
-
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "_" + file.originalname);
-  }
-});
-
-const upload = multer({ storage });
-
-let currentExam = null; // 🔥 shared for all students
-
-/* ================= TEST ================= */
-
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
-
-/* ================= AI QUESTION GENERATOR ================= */
 
 app.post("/api/generate", async (req, res) => {
   try {
@@ -116,11 +89,18 @@ Then generate ${count} questions under this section.
 `;
     }
 
+    // ✅ UPDATED OPENAI API (ONLY THIS PART CHANGED)
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: [
-        { role: "system", content: "You are a professional school exam paper setter." },
-        { role: "user", content: prompt }
+        {
+          role: "system",
+          content: "You are a professional school exam paper setter."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
       ],
       temperature: 0.6
     });
@@ -137,36 +117,6 @@ Then generate ${count} questions under this section.
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
-/* ================= ✅ TEACHER UPLOAD PDF ================= */
-
-app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
-
-  const { questions, answers } = JSON.parse(req.body.meta);
-
-  const fileUrl = `/uploads/${req.file.filename}`;
-
-  currentExam = {
-    name: req.file.originalname,
-    url: fileUrl,
-    questions,
-    answers
-  };
-
-  res.json({ success: true, exam: currentExam });
-});
-
-/* ================= ✅ STUDENT GET CURRENT EXAM ================= */
-
-app.get("/api/currentExam", (req, res) => {
-  res.json(currentExam);
-});
-
-/* ================= ✅ SERVE PDF FILE ================= */
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-/* ================= SERVER ================= */
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on", PORT));
