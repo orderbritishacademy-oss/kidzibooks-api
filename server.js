@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-/* ✅ NEW FOR PDF UPLOAD */
+/* ✅ PDF UPLOAD */
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -31,7 +31,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-let currentExam = null; // 🔥 shared for all students
+/* 🔥 MULTIPLE EXAMS STORAGE */
+let exams = [];
 
 /* ================= TEST ================= */
 
@@ -138,24 +139,24 @@ Then generate ${count} questions under this section.
   }
 });
 
-/* ================= ✅ TEACHER UPLOAD PDF ================= */
+/* ================= ✅ UPLOAD EXAM ================= */
 
 app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
   try {
     const fileUrl = `/uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
-    currentExam = {
+    const exam = {
+      id: Date.now(),
       name: req.file.originalname,
       url: fileUrl,
       questions: meta.questions || [],
       answers: meta.answers || {}
     };
 
-    console.log("✅ Questions:", currentExam.questions.length);
-    console.log("✅ Answers:", Object.keys(currentExam.answers).length);
+    exams.push(exam);
 
-    res.json({ success: true, exam: currentExam });
+    res.json({ success: true, exam });
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -163,13 +164,30 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
   }
 });
 
-/* ================= ✅ STUDENT GET CURRENT EXAM ================= */
+/* ================= ✅ GET ALL EXAMS ================= */
 
-app.get("/api/currentExam", (req, res) => {
-  res.json(currentExam);
+app.get("/api/exams", (req, res) => {
+  res.json(exams);
 });
 
-/* ================= ✅ SERVE PDF FILE ================= */
+/* ================= ✅ DELETE EXAM ================= */
+
+app.delete("/api/deleteExam/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const exam = exams.find(e => e.id === id);
+
+  if (exam) {
+    const filePath = path.join(__dirname, exam.url);
+    fs.unlink(filePath, () => {});
+  }
+
+  exams = exams.filter(e => e.id !== id);
+
+  res.json({ success: true });
+});
+
+/* ================= SERVE PDF FILE ================= */
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
