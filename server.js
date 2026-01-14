@@ -141,11 +141,16 @@ Then generate ${count} questions under this section.
 /* ================= ✅ TEACHER UPLOAD PDF ================= */
 
 app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
+
+  const { questions, answers } = JSON.parse(req.body.meta);
+
   const fileUrl = `/uploads/${req.file.filename}`;
 
   currentExam = {
     name: req.file.originalname,
-    url: fileUrl
+    url: fileUrl,
+    questions,
+    answers
   };
 
   res.json({ success: true, exam: currentExam });
