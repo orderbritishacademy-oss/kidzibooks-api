@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -44,9 +43,10 @@ app.get("/", (req, res) => {
 
 app.post("/api/generate", async (req, res) => {
   try {
-    const { topic, difficulty, type, count } = req.body;
+    // ✅ ADDED subject + studentClass
+    const { studentClass, subject, topic, difficulty, type, count } = req.body;
 
-    if (!topic || !difficulty || !type || !count) {
+    if (!studentClass || !subject || !topic || !difficulty || !type || !count) {
       return res.status(400).json({ success: false });
     }
 
@@ -54,24 +54,30 @@ app.post("/api/generate", async (req, res) => {
 
     if (type === "ALL") {
       prompt = `
-Create a student-level question paper.
+Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
+
+Class: ${studentClass}
+Subject: ${subject}
+Topic: ${topic}
+Difficulty Level: ${difficulty}
 
 IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
 - Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Show the topic name at the top in UPPERCASE
+- Show topic name at the top in UPPERCASE
 - Use clear SECTION headings (plain text)
 - Proper question numbering (1, 2, 3)
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
 - For Match the Following, show two clear columns
+- All questions must be strictly from given SUBJECT and TOPIC
 
 Start the paper EXACTLY like this:
 
 QUESTION PAPER – ${topic.toUpperCase()}
 
-Then generate ${count} questions in EACH section:
+Then generate around ${count} total questions in following sections:
 
 SECTION A: MCQs
 SECTION B: True / False
@@ -92,20 +98,32 @@ a) Item from Column A        1) Item from Column B
 b) Item from Column A        2) Item from Column B
 c) Item from Column A        3) Item from Column B
 d) Item from Column A        4) Item from Column B
+
+After all questions write:
+
+ANSWER KEY
+and give answers section-wise.
 `;
     } else {
       prompt = `
-Create a student-level question paper.
+Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
+
+Class: ${studentClass}
+Subject: ${subject}
+Topic: ${topic}
+Difficulty Level: ${difficulty}
+Question Type: ${type}
 
 IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Use ONLY plain text
 - Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Show the topic name at the top in UPPERCASE
+- Show topic name at the top in UPPERCASE
 - Always start with a SECTION heading
 - Proper numbering (1, 2, 3)
 - Student-friendly language
 - Do NOT mix answers with questions
 - Add a separate ANSWER KEY at the end
+- Questions must be strictly from SUBJECT and TOPIC
 
 Start the paper EXACTLY like this:
 
@@ -114,16 +132,21 @@ QUESTION PAPER – ${topic.toUpperCase()}
 SECTION: ${type}
 
 Then generate ${count} questions under this section.
+
+After questions write:
+
+ANSWER KEY
+and then answers.
 `;
     }
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
       input: [
-        { role: "system", content: "You are a professional school exam paper setter." },
+        { role: "system", content: "You are a professional Indian school exam paper setter." },
         { role: "user", content: prompt }
       ],
-      temperature: 0.6
+      temperature: 0.5
     });
 
     const output = response.output_text;
