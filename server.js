@@ -52,7 +52,32 @@ app.post("/api/generate", async (req, res) => {
 
     let prompt = "";
 
-    if (type === "ALL") {
+    if (type === "NOTES") {
+  prompt = `
+Create detailed STUDY NOTES for school students as per CBSE.
+
+Class: ${studentClass}
+Subject: ${subject}
+Topic: ${topic}
+Difficulty Level: ${difficulty}
+
+IMPORTANT RULES:
+- This is NOT a question paper
+- Give clear explanation in simple language
+- Use short paragraphs and headings in plain text
+- Include definitions, key points and examples
+- Suitable for revision before exam
+- No questions, no answer key
+
+Start exactly like this:
+
+STUDY NOTES – ${topic.toUpperCase()}
+
+Then give topic-wise explanation.
+`;
+}
+else if (type === "ALL") {
+
       prompt = `
 Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
 
