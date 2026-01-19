@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
 
-/* ✅ NEW FOR PDF UPLOAD */
+/* ✅ PDF UPLOAD */
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -17,21 +17,53 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* ================= PDF STORAGE ================= */
+/* ================= EXAM DATA FILE ================= */
 
-const uploadDir = "uploads";
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+const dataDir = path.join(__dirname, "data");
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: uploadDir,
+const examDataFile = path.join(dataDir, "currentExam.json");
+
+let currentExam = null; // 🔥 shared for all students
+
+// ✅ LOAD SAVED EXAM ON SERVER START
+if (fs.existsSync(examDataFile)) {
+  try {
+    const data = fs.readFileSync(examDataFile, "utf-8");
+    currentExam = JSON.parse(data);
+    console.log("✅ Loaded saved exam from file");
+  } catch (e) {
+    console.log("❌ Failed to load saved exam");
+  }
+}
+
+/* ================= EXAM PDF STORAGE (SCHOOL PORTAL) ================= */
+
+const examUploadDir = path.join(__dirname, "exam_uploads");
+if (!fs.existsSync(examUploadDir)) fs.mkdirSync(examUploadDir, { recursive: true });
+
+const examStorage = multer.diskStorage({
+  destination: examUploadDir,
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "_" + file.originalname);
+    cb(null, Date.now() + "_EXAM_" + file.originalname);
   }
 });
 
-const upload = multer({ storage });
+const uploadExamPDF = multer({ storage: examStorage });
 
-let currentExam = null; // 🔥 shared for all students
+/* ================= OLYMPIAD PDF STORAGE ================= */
+
+const olympiadUploadDir = path.join(__dirname, "olympiad_uploads");
+if (!fs.existsSync(olympiadUploadDir)) fs.mkdirSync(olympiadUploadDir, { recursive: true });
+
+const olympiadStorage = multer.diskStorage({
+  destination: olympiadUploadDir,
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "_OLYMPIAD_" + file.originalname);
+  }
+});
+
+const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 
 /* ================= TEST ================= */
 
@@ -43,7 +75,6 @@ app.get("/", (req, res) => {
 
 app.post("/api/generate", async (req, res) => {
   try {
-    // ✅ ADDED subject + studentClass
     const { studentClass, subject, topic, difficulty, type, count } = req.body;
 
     if (!studentClass || !subject || !topic || !difficulty || !type || !count) {
@@ -53,7 +84,7 @@ app.post("/api/generate", async (req, res) => {
     let prompt = "";
 
     if (type === "NOTES") {
-  prompt = `
+      prompt = `
 Create detailed STUDY NOTES for school students as per CBSE.
 
 Class: ${studentClass}
@@ -75,8 +106,8 @@ STUDY NOTES – ${topic.toUpperCase()}
 
 Then give topic-wise explanation.
 `;
-}
-else if (type === "ALL") {
+    }
+    else if (type === "ALL") {
 
       prompt = `
 Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
@@ -187,11 +218,11 @@ and then answers.
   }
 });
 
-/* ================= ✅ TEACHER UPLOAD PDF ================= */
+/* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
 
-app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
+app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
   try {
-    const fileUrl = `/uploads/${req.file.filename}`;
+    const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
     currentExam = {
@@ -201,8 +232,10 @@ app.post("/api/uploadExam", upload.single("pdf"), (req, res) => {
       answers: meta.answers || {}
     };
 
-    console.log("✅ Questions:", currentExam.questions.length);
-    console.log("✅ Answers:", Object.keys(currentExam.answers).length);
+    // ✅ SAVE TO FILE (PERSISTENT)
+    fs.writeFileSync(examDataFile, JSON.stringify(currentExam, null, 2));
+
+    console.log("✅ Exam saved to file");
 
     res.json({ success: true, exam: currentExam });
 
@@ -218,9 +251,32 @@ app.get("/api/currentExam", (req, res) => {
   res.json(currentExam);
 });
 
-/* ================= ✅ SERVE PDF FILE ================= */
+/* ================= ✅ OLYMPIAD PDF UPLOAD (GETFRANCHISE PAGE) ================= */
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) => {
+  try {
+    const fileUrl = `/olympiad_uploads/${req.file.filename}`;
+    const meta = JSON.parse(req.body.meta || "{}");
+
+    const olympiadExam = {
+      name: req.file.originalname,
+      url: fileUrl,
+      questions: meta.questions || [],
+      answers: meta.answers || {}
+    };
+
+    res.json({ success: true, exam: olympiadExam });
+
+  } catch (err) {
+    console.error("OLYMPIAD UPLOAD ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+/* ================= STATIC FILE SERVING ================= */
+
+app.use("/exam_uploads", express.static(examUploadDir));
+app.use("/olympiad_uploads", express.static(olympiadUploadDir));
 
 /* ================= SERVER ================= */
 
