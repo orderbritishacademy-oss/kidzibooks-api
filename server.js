@@ -24,16 +24,31 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const examDataFile = path.join(dataDir, "currentExam.json");
 
-let currentExam = null; // 🔥 shared for all students
+/* ✅ NEW: OLYMPIAD DATA FILE */
+const olympiadDataFile = path.join(dataDir, "currentOlympiadExam.json");
 
-// ✅ LOAD SAVED EXAM ON SERVER START
+let currentExam = null; // 🔥 School exam
+let currentOlympiadExam = null; // 🔥 Olympiad exam (SEPARATE)
+
+/* ===== LOAD SCHOOL EXAM ===== */
 if (fs.existsSync(examDataFile)) {
   try {
     const data = fs.readFileSync(examDataFile, "utf-8");
     currentExam = JSON.parse(data);
-    console.log("✅ Loaded saved exam from file");
+    console.log("✅ Loaded saved school exam");
   } catch (e) {
-    console.log("❌ Failed to load saved exam");
+    console.log("❌ Failed to load school exam");
+  }
+}
+
+/* ===== LOAD OLYMPIAD EXAM ===== */
+if (fs.existsSync(olympiadDataFile)) {
+  try {
+    const data = fs.readFileSync(olympiadDataFile, "utf-8");
+    currentOlympiadExam = JSON.parse(data);
+    console.log("✅ Loaded saved olympiad exam");
+  } catch (e) {
+    console.log("❌ Failed to load olympiad exam");
   }
 }
 
@@ -228,14 +243,16 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
     currentExam = {
       name: req.file.originalname,
       url: fileUrl,
+      class: meta.class,
+      subject: meta.subject,
+      chapter: meta.chapter,
       questions: meta.questions || [],
       answers: meta.answers || {}
     };
 
-    // ✅ SAVE TO FILE (PERSISTENT)
     fs.writeFileSync(examDataFile, JSON.stringify(currentExam, null, 2));
 
-    console.log("✅ Exam saved to file");
+    console.log("✅ School exam saved");
 
     res.json({ success: true, exam: currentExam });
 
@@ -245,13 +262,13 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
   }
 });
 
-/* ================= ✅ STUDENT GET CURRENT EXAM ================= */
+/* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 
 app.get("/api/currentExam", (req, res) => {
   res.json(currentExam);
 });
 
-/* ================= ✅ OLYMPIAD PDF UPLOAD (GETFRANCHISE PAGE) ================= */
+/* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
 
 app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) => {
   try {
@@ -265,12 +282,24 @@ app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) =
       answers: meta.answers || {}
     };
 
+    currentOlympiadExam = olympiadExam;
+
+    fs.writeFileSync(olympiadDataFile, JSON.stringify(currentOlympiadExam, null, 2));
+
+    console.log("✅ Olympiad exam saved");
+
     res.json({ success: true, exam: olympiadExam });
 
   } catch (err) {
     console.error("OLYMPIAD UPLOAD ERROR:", err);
     res.status(500).json({ success: false });
   }
+});
+
+/* ================= ✅ STUDENT GET OLYMPIAD EXAM ================= */
+
+app.get("/api/currentOlympiadExam", (req, res) => {
+  res.json(currentOlympiadExam);
 });
 
 /* ================= STATIC FILE SERVING ================= */
