@@ -277,15 +277,35 @@ app.get("/api/allExams", (req, res) => {
 });
 
 /* ================= ✅ STUDENT GET delete EXAM pdf================= */
+// app.delete("/api/deleteExam/:id", (req, res) => {
+//   const id = Number(req.params.id);
+
+//   allExams = allExams.filter(e => e.id !== id);
+
+//   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+
+//   res.json({ success: true });
+// });
 app.delete("/api/deleteExam/:id", (req, res) => {
   const id = Number(req.params.id);
 
+  const exam = allExams.find(e => e.id === id);
+  if (!exam) return res.json({ success: false });
+
+  // ✅ DELETE PDF FILE
+  const filePath = path.join(__dirname, exam.url);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+
+  // ✅ DELETE FROM LIST
   allExams = allExams.filter(e => e.id !== id);
 
   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
 
   res.json({ success: true });
 });
+
 
 /* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
 
