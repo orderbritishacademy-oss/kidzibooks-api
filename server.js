@@ -22,24 +22,27 @@ const openai = new OpenAI({
 const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-const examDataFile = path.join(dataDir, "currentExam.json");
+const examDataFile = path.join(dataDir, "allExams.json");
+let allExams = [];// 🔥 School exam
+
 
 /* ✅ NEW: OLYMPIAD DATA FILE */
 const olympiadDataFile = path.join(dataDir, "currentOlympiadExam.json");
 
-let currentExam = null; // 🔥 School exam
+// let currentExam = null; // 🔥 School exam
 let currentOlympiadExam = null; // 🔥 Olympiad exam (SEPARATE)
 
 /* ===== LOAD SCHOOL EXAM ===== */
 if (fs.existsSync(examDataFile)) {
   try {
     const data = fs.readFileSync(examDataFile, "utf-8");
-    currentExam = JSON.parse(data);
-    console.log("✅ Loaded saved school exam");
+    allExams = JSON.parse(data) || [];
+    console.log("✅ Loaded saved school exams:", allExams.length);
   } catch (e) {
-    console.log("❌ Failed to load school exam");
+    console.log("❌ Failed to load school exams");
   }
 }
+
 
 /* ===== LOAD OLYMPIAD EXAM ===== */
 if (fs.existsSync(olympiadDataFile)) {
@@ -240,21 +243,25 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
-    currentExam = {
+    const newExam = {
+      id: Date.now(),
       name: req.file.originalname,
       url: fileUrl,
       class: meta.class,
       subject: meta.subject,
       chapter: meta.chapter,
       questions: meta.questions || [],
-      answers: meta.answers || {}
+      answers: meta.answers || {},
+      createdAt: new Date()
     };
 
-    fs.writeFileSync(examDataFile, JSON.stringify(currentExam, null, 2));
+    allExams.push(newExam);
 
-    console.log("✅ School exam saved");
+    fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
 
-    res.json({ success: true, exam: currentExam });
+    console.log("✅ School exam added. Total:", allExams.length);
+
+    res.json({ success: true, exam: newExam });
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -262,10 +269,22 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
   }
 });
 
+
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 
-app.get("/api/currentExam", (req, res) => {
-  res.json(currentExam);
+app.get("/api/allExams", (req, res) => {
+  res.json(allExams);
+});
+
+/* ================= ✅ STUDENT GET delete EXAM pdf================= */
+app.delete("/api/deleteExam/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  allExams = allExams.filter(e => e.id !== id);
+
+  fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+
+  res.json({ success: true });
 });
 
 /* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
