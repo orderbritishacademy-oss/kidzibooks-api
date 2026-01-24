@@ -155,6 +155,36 @@ app.post("/api/auth/register-school", async (req, res) => {
     res.status(500).json({ msg: "School register failed" });
   }
 });
+/* ---- SCHOOL LOGIN ---- */
+app.post("/api/auth/school-login", async (req, res) => {
+  try {
+    let { schoolCode, adminPassword } = req.body;
+
+    schoolCode = schoolCode?.trim();
+    adminPassword = adminPassword?.trim();
+
+    if (!schoolCode || !adminPassword)
+      return res.status(400).json({ msg: "Invalid input" });
+
+    const school = await School.findOne({ schoolCode });
+    if (!school) return res.status(401).json({ msg: "Invalid school code" });
+
+    const ok = await bcrypt.compare(adminPassword, school.adminPassword);
+    if (!ok) return res.status(401).json({ msg: "Wrong password" });
+
+    const token = jwt.sign(
+      { role: "school", schoolCode },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ token });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ msg: "School login failed" });
+  }
+});
 
 /* ---- REGISTER TEACHER ---- */
 app.post("/api/auth/register-teacher", async (req, res) => {
