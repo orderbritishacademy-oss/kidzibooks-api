@@ -45,6 +45,14 @@ const StudentSchema = new mongoose.Schema({
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
 
+/* ================= SCHOOL MODEL ================= */
+const SchoolSchema = new mongoose.Schema({
+  schoolName: String,
+  schoolCode: { type: String, unique: true },
+  adminPassword: String
+});
+const School = mongoose.model("School", SchoolSchema);
+
 /* ================= EXAM DATA FILE ================= */
 
 const dataDir = path.join(__dirname, "data");
@@ -117,6 +125,36 @@ app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
 /* ================= AUTH APIs ================= */
+/* ---- REGISTER SCHOOL ---- */
+app.post("/api/auth/register-school", async (req, res) => {
+  try {
+    let { schoolName, schoolCode, adminPassword } = req.body;
+
+    schoolName = schoolName?.trim();
+    schoolCode = schoolCode?.trim();
+    adminPassword = adminPassword?.trim();
+
+    if (!schoolName || !schoolCode || !adminPassword)
+      return res.status(400).json({ msg: "Invalid input" });
+
+    const exists = await School.findOne({ schoolCode });
+    if (exists) return res.status(400).json({ msg: "School already exists" });
+
+    const hash = await bcrypt.hash(adminPassword, 10);
+
+    await School.create({
+      schoolName,
+      schoolCode,
+      adminPassword: hash
+    });
+
+    res.json({ success: true });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ msg: "School register failed" });
+  }
+});
 
 /* ---- REGISTER TEACHER ---- */
 app.post("/api/auth/register-teacher", async (req, res) => {
@@ -129,7 +167,11 @@ app.post("/api/auth/register-teacher", async (req, res) => {
   if (!schoolCode || !teacherId || !password)
     return res.status(400).json({ msg: "Invalid input" });
 
+  const school = await School.findOne({ schoolCode });
+  if (!school) return res.status(400).json({ msg: "Invalid school code" });
+
   const exists = await Teacher.findOne({ schoolCode, teacherId });
+
   if (exists) return res.status(400).json({ msg: "Teacher already exists" });
 
   const hash = await bcrypt.hash(password, 10);
@@ -153,7 +195,11 @@ app.post("/api/auth/register-student", async (req, res) => {
   if (!schoolCode || !studentId || !stuClass || !name || !password)
     return res.status(400).json({ msg: "Invalid input" });
 
+  const school = await School.findOne({ schoolCode });
+  if (!school) return res.status(400).json({ msg: "Invalid school code" });
+
   const exists = await Student.findOne({ schoolCode, studentId });
+
   if (exists) return res.status(400).json({ msg: "Student already exists" });
 
   const hash = await bcrypt.hash(password, 10);
