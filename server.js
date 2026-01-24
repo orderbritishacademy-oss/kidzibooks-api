@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -8,48 +7,9 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-/* ✅ NEW FOR OTP LOGIN */
-const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
-const axios = require("axios");
-require("dotenv").config();
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-/* ================= MONGODB CONNECT ================= */
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.log("❌ Mongo error", err));
-
-/* ================= OTP + USER MODELS ================= */
-
-const UserSchema = new mongoose.Schema({
-  phone: String,
-  role: { type: String, default: "student" },
-
-  // ✅ NEW FIELDS
-  schoolName: String,
-
-  teacherName: String,
-
-  studentName: String,
-  studentClass: String,
-
-  createdAt: { type: Date, default: Date.now }
-});
-
-
-const OTPSchema = new mongoose.Schema({
-  phone: String,
-  otp: String,
-  expiresAt: Date
-});
-
-const User = mongoose.model("User", UserSchema);
-const OTP = mongoose.model("OTP", OTPSchema);
 
 /* ================= OPENAI ================= */
 
@@ -127,109 +87,6 @@ const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
-});
-
-/* ================= ✅ OTP SEND ================= */
-
-app.post("/api/auth/send-otp", async (req, res) => {
-  try {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ msg: "Phone required" });
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    await OTP.deleteMany({ phone });
-
-    await OTP.create({
-      phone,
-      otp,
-      expiresAt: Date.now() + 5 * 60 * 1000
-    });
-
-    await axios.get("https://www.fast2sms.com/dev/bulkV2", {
-      params: {
-        authorization: process.env.FAST2SMS_KEY,
-        route: "otp",
-        numbers: phone,
-        variables_values: otp
-      }
-    });
-
-    console.log("OTP SENT:", phone, otp);
-
-    res.json({ success: true, msg: "OTP sent" });
-
-  } catch (err) {
-    console.log("OTP SEND ERROR:", err);
-    res.status(500).json({ success: false });
-  }
-});
-
-/* ================= ✅ OTP VERIFY + LOGIN ================= */
-
-app.post("/api/auth/verify-otp", async (req, res) => {
-  try {
-    const { phone, otp, role, schoolName, teacherName, stuName, stuClass } = req.body;
-
-    const record = await OTP.findOne({ phone, otp });
-
-    if (!record || record.expiresAt < Date.now()) {
-      return res.status(400).json({ msg: "Invalid or expired OTP" });
-    }
-
-    await OTP.deleteMany({ phone });
-
-    let user = await User.findOne({ phone });
-
-    if (!user) {
-      user = await User.create({
-        phone,
-        role: role || "student",
-        schoolName,
-
-        teacherName: role === "teacher" ? teacherName : undefined,
-
-        studentName: role === "student" ? stuName : undefined,
-        studentClass: role === "student" ? stuClass : undefined
-      });
-    }
-    else {
-      // ✅ UPDATE DETAILS ON EVERY LOGIN
-      user.schoolName = schoolName;
-
-      if (role === "teacher") {
-        user.teacherName = teacherName;
-      }
-
-      if (role === "student") {
-        user.studentName = stuName;
-        user.studentClass = stuClass;
-      }
-
-      await user.save();
-    }
-
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      success: true,
-      token,
-      role: user.role,
-      schoolName: user.schoolName,
-      teacherName: user.teacherName,
-      studentName: user.studentName,
-      studentClass: user.studentClass
-    });
-
-  } catch (err) {
-    console.log("OTP VERIFY ERROR:", err);
-    res.status(500).json({ success: false });
-  }
 });
 
 /* ================= AI QUESTION GENERATOR ================= */
@@ -420,18 +277,28 @@ app.get("/api/allExams", (req, res) => {
 });
 
 /* ================= ✅ STUDENT GET delete EXAM pdf================= */
+// app.delete("/api/deleteExam/:id", (req, res) => {
+//   const id = Number(req.params.id);
 
+//   allExams = allExams.filter(e => e.id !== id);
+
+//   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+
+//   res.json({ success: true });
+// });
 app.delete("/api/deleteExam/:id", (req, res) => {
   const id = Number(req.params.id);
 
   const exam = allExams.find(e => e.id === id);
   if (!exam) return res.json({ success: false });
 
+  // ✅ DELETE PDF FILE
   const filePath = path.join(__dirname, exam.url);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
 
+  // ✅ DELETE FROM LIST
   allExams = allExams.filter(e => e.id !== id);
 
   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
