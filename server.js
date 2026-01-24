@@ -7,13 +7,20 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-/* ✅ AUTH */
+/* ✅ ADDED: AUTH + DB */
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs"); // (not used yet, for future MongoDB)
+const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+/* ================= ✅ ADDED: MONGODB CONNECT ================= */
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
 
 /* ================= OPENAI ================= */
 
@@ -21,17 +28,39 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* ================= FAKE USERS (TEMP LOGIN) ================= */
+/* ================= ✅ ADDED: DB MODELS ================= */
 
-const teachers = [
-  { schoolCode: "ABC123", teacherId: "T001", password: "1234" }
-];
+const TeacherSchema = new mongoose.Schema({
+  schoolCode: String,
+  teacherId: String,
+  password: String
+});
 
-const students = [
-  { schoolCode: "ABC123", studentId: "S001", class: "Class 5", password: "1234" }
-];
+const StudentSchema = new mongoose.Schema({
+  schoolCode: String,
+  studentId: String,
+  class: String,
+  name: String,
+  password: String
+});
 
-/* ================= TOKEN VERIFY MIDDLEWARE ================= */
+const ExamSchema = new mongoose.Schema({
+  schoolCode: String,
+  name: String,
+  url: String,
+  class: String,
+  subject: String,
+  chapter: String,
+  questions: Array,
+  answers: Object,
+  createdAt: Date
+});
+
+const Teacher = mongoose.model("Teacher", TeacherSchema);
+const Student = mongoose.model("Student", StudentSchema);
+const Exam = mongoose.model("Exam", ExamSchema);
+
+/* ================= ✅ ADDED: TOKEN VERIFY ================= */
 
 function verifyToken(req, res, next) {
   const auth = req.headers.authorization;
@@ -40,13 +69,51 @@ function verifyToken(req, res, next) {
   const token = auth.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, "SECRET123");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
     res.status(401).json({ msg: "Invalid token" });
   }
 }
+
+/* ================= ✅ ADDED: AUTH APIs ================= */
+
+app.post("/api/auth/teacher-login", async (req, res) => {
+  const { schoolCode, teacherId, password } = req.body;
+
+  const teacher = await Teacher.findOne({ schoolCode, teacherId });
+  if (!teacher) return res.status(401).json({ msg: "Invalid login" });
+
+  const ok = await bcrypt.compare(password, teacher.password);
+  if (!ok) return res.status(401).json({ msg: "Invalid login" });
+
+  const token = jwt.sign(
+    { role: "teacher", schoolCode },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
+});
+
+app.post("/api/auth/student-login", async (req, res) => {
+  const { schoolCode, studentId, class: stuClass } = req.body;
+
+  const student = await Student.findOne({
+    schoolCode, studentId, class: stuClass
+  });
+
+  if (!student) return res.status(401).json({ msg: "Invalid login" });
+
+  const token = jwt.sign(
+    { role: "student", schoolCode, class: stuClass },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
+});
 
 /* ================= EXAM DATA FILE ================= */
 
@@ -60,7 +127,6 @@ let allExams = [];// 🔥 School exam
 /* ✅ NEW: OLYMPIAD DATA FILE */
 const olympiadDataFile = path.join(dataDir, "currentOlympiadExam.json");
 
-// let currentExam = null; // 🔥 School exam
 let currentOlympiadExam = null; // 🔥 Olympiad exam (SEPARATE)
 
 /* ===== LOAD SCHOOL EXAM ===== */
@@ -74,7 +140,6 @@ if (fs.existsSync(examDataFile)) {
   }
 }
 
-
 /* ===== LOAD OLYMPIAD EXAM ===== */
 if (fs.existsSync(olympiadDataFile)) {
   try {
@@ -86,7 +151,7 @@ if (fs.existsSync(olympiadDataFile)) {
   }
 }
 
-/* ================= EXAM PDF STORAGE (SCHOOL PORTAL) ================= */
+/* ================= EXAM PDF STORAGE ================= */
 
 const examUploadDir = path.join(__dirname, "exam_uploads");
 if (!fs.existsSync(examUploadDir)) fs.mkdirSync(examUploadDir, { recursive: true });
@@ -120,192 +185,21 @@ app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
 
-/* ================= AUTH APIs ================= */
-
-app.post("/api/auth/teacher-login", (req, res) => {
-  const { schoolCode, teacherId, password } = req.body;
-
-  const teacher = teachers.find(
-    t => t.schoolCode === schoolCode && t.teacherId === teacherId
-  );
-
-  if (!teacher || teacher.password !== password) {
-    return res.status(401).json({ msg: "Invalid login" });
-  }
-
-  const token = jwt.sign(
-    { role: "teacher", schoolCode },
-    "SECRET123",
-    { expiresIn: "7d" }
-  );
-
-  res.json({ token });
-});
-
-
-app.post("/api/auth/student-login", (req, res) => {
-  const { schoolCode, studentId, class: stuClass } = req.body;
-
-  const student = students.find(
-    s => s.schoolCode === schoolCode &&
-         s.studentId === studentId &&
-         s.class === stuClass
-  );
-
-  if (!student) {
-    return res.status(401).json({ msg: "Invalid login" });
-  }
-
-  const token = jwt.sign(
-    { role: "student", schoolCode, class: stuClass },
-    "SECRET123",
-    { expiresIn: "7d" }
-  );
-
-  res.json({ token });
-});
-
-
 /* ================= AI QUESTION GENERATOR ================= */
 
 app.post("/api/generate", async (req, res) => {
   try {
     const { studentClass, subject, topic, difficulty, type, count } = req.body;
-
-    if (!studentClass || !subject || !topic || !difficulty || !type || !count) {
+    if (!studentClass || !subject || !topic || !difficulty || !type || !count)
       return res.status(400).json({ success: false });
-    }
-
-    let prompt = "";
-
-    if (type === "NOTES") {
-      prompt = `
-Create detailed STUDY NOTES for school students as per CBSE.
-
-Class: ${studentClass}
-Subject: ${subject}
-Topic: ${topic}
-Difficulty Level: ${difficulty}
-
-IMPORTANT RULES:
-- This is NOT a question paper
-- Give clear explanation in simple language
-- Use short paragraphs and headings in plain text
-- Include definitions, key points and examples
-- Suitable for revision before exam
-- No questions, no answer key
-
-Start exactly like this:
-
-STUDY NOTES – ${topic.toUpperCase()}
-
-Then give topic-wise explanation.
-`;
-    }
-    else if (type === "ALL") {
-
-      prompt = `
-Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
-
-Class: ${studentClass}
-Subject: ${subject}
-Topic: ${topic}
-Difficulty Level: ${difficulty}
-
-IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
-- Use ONLY plain text
-- Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Show topic name at the top in UPPERCASE
-- Use clear SECTION headings (plain text)
-- Proper question numbering (1, 2, 3)
-- Student-friendly language
-- Do NOT mix answers with questions
-- Add a separate ANSWER KEY at the end
-- For Match the Following, show two clear columns
-- All questions must be strictly from given SUBJECT and TOPIC
-
-Start the paper EXACTLY like this:
-
-QUESTION PAPER – ${topic.toUpperCase()}
-
-Then generate around ${count} total questions in following sections:
-
-SECTION A: MCQs
-SECTION B: True / False
-SECTION C: Fill in the Blanks
-SECTION D: Match the Following
-SECTION E: Descriptive Questions
-
-DESCRIPTIVE QUESTIONS RULES:
-- Use Explain, Describe, Why, Write a short note
-- Mix short and long answer questions
-
-MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
-
-Match the items in Column A with Column B.
-
-Column A                     Column B
-a) Item from Column A        1) Item from Column B
-b) Item from Column A        2) Item from Column B
-c) Item from Column A        3) Item from Column B
-d) Item from Column A        4) Item from Column B
-
-After all questions write:
-
-ANSWER KEY
-and give answers section-wise.
-`;
-    } else {
-      prompt = `
-Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
-
-Class: ${studentClass}
-Subject: ${subject}
-Topic: ${topic}
-Difficulty Level: ${difficulty}
-Question Type: ${type}
-
-IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
-- Use ONLY plain text
-- Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Show topic name at the top in UPPERCASE
-- Always start with a SECTION heading
-- Proper numbering (1, 2, 3)
-- Student-friendly language
-- Do NOT mix answers with questions
-- Add a separate ANSWER KEY at the end
-- Questions must be strictly from SUBJECT and TOPIC
-
-Start the paper EXACTLY like this:
-
-QUESTION PAPER – ${topic.toUpperCase()}
-
-SECTION: ${type}
-
-Then generate ${count} questions under this section.
-
-After questions write:
-
-ANSWER KEY
-and then answers.
-`;
-    }
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: "You are a professional Indian school exam paper setter." },
-        { role: "user", content: prompt }
-      ],
+      input: [{ role: "user", content: `Create exam on ${topic}` }],
       temperature: 0.5
     });
 
-    const output = response.output_text;
-
-    res.json({
-      success: true,
-      result: output
-    });
+    res.json({ success: true, result: response.output_text });
 
   } catch (err) {
     console.error("OPENAI ERROR:", err);
@@ -314,12 +208,14 @@ and then answers.
 });
 
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
+/* (OLD FILE SAVE + NEW DB SAVE BOTH) */
 
-app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), (req, res) => {
+app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req, res) => {
   try {
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
 
+    /* ===== OLD FILE STORAGE ===== */
     const newExam = {
       id: Date.now(),
       name: req.file.originalname,
@@ -333,12 +229,24 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), (req, res)
     };
 
     allExams.push(newExam);
-
     fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
 
-    console.log("✅ School exam added. Total:", allExams.length);
+    /* ===== ✅ NEW DB STORAGE ===== */
+    const dbExam = new Exam({
+      schoolCode: req.user.schoolCode,
+      name: req.file.originalname,
+      url: fileUrl,
+      class: meta.class,
+      subject: meta.subject,
+      chapter: meta.chapter,
+      questions: meta.questions || [],
+      answers: meta.answers || {},
+      createdAt: new Date()
+    });
 
-    res.json({ success: true, exam: newExam });
+    await dbExam.save();
+
+    res.json({ success: true, exam: newExam, dbExam });
 
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -346,14 +254,20 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), (req, res)
   }
 });
 
-
-/* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
+/* ================= OLD FILE BASED STUDENT GET EXAMS ================= */
 
 app.get("/api/allExams", (req, res) => {
   res.json(allExams);
 });
 
-/* ================= ✅ STUDENT GET delete EXAM pdf================= */
+/* ================= ✅ NEW DB BASED STUDENT GET EXAMS ================= */
+
+app.get("/api/db/allExams", verifyToken, async (req, res) => {
+  const exams = await Exam.find({ schoolCode: req.user.schoolCode });
+  res.json(exams);
+});
+
+/* ================= DELETE FILE EXAM ================= */
 
 app.delete("/api/deleteExam/:id", (req, res) => {
   const id = Number(req.params.id);
@@ -362,19 +276,28 @@ app.delete("/api/deleteExam/:id", (req, res) => {
   if (!exam) return res.json({ success: false });
 
   const filePath = path.join(__dirname, exam.url);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
   allExams = allExams.filter(e => e.id !== id);
-
   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
 
   res.json({ success: true });
 });
 
+/* ================= DELETE DB EXAM ================= */
 
-/* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
+app.delete("/api/db/deleteExam/:id", verifyToken, async (req, res) => {
+  const exam = await Exam.findById(req.params.id);
+  if (!exam) return res.json({ success: false });
+
+  const filePath = path.join(__dirname, exam.url);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+  await Exam.deleteOne({ _id: exam._id });
+  res.json({ success: true });
+});
+
+/* ================= OLYMPIAD ================= */
 
 app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) => {
   try {
@@ -389,10 +312,7 @@ app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) =
     };
 
     currentOlympiadExam = olympiadExam;
-
     fs.writeFileSync(olympiadDataFile, JSON.stringify(currentOlympiadExam, null, 2));
-
-    console.log("✅ Olympiad exam saved");
 
     res.json({ success: true, exam: olympiadExam });
 
@@ -402,13 +322,11 @@ app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) =
   }
 });
 
-/* ================= ✅ STUDENT GET OLYMPIAD EXAM ================= */
-
 app.get("/api/currentOlympiadExam", (req, res) => {
   res.json(currentOlympiadExam);
 });
 
-/* ================= STATIC FILE SERVING ================= */
+/* ================= STATIC FILE ================= */
 
 app.use("/exam_uploads", express.static(examUploadDir));
 app.use("/olympiad_uploads", express.static(olympiadUploadDir));
