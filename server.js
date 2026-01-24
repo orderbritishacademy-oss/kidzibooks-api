@@ -6,16 +6,44 @@ const OpenAI = require("openai");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+/* ✅ AUTH + DB */
+const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+/* ✅ MONGODB CONNECT */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
 
 /* ================= OPENAI ================= */
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+/* ================= USER MODELS ================= */
+
+const TeacherSchema = new mongoose.Schema({
+  schoolCode: String,
+  teacherId: String,
+  password: String
+});
+
+const StudentSchema = new mongoose.Schema({
+  schoolCode: String,
+  studentId: String,
+  class: String,
+  name: String,
+  password: String
+});
+
+const Teacher = mongoose.model("Teacher", TeacherSchema);
+const Student = mongoose.model("Student", StudentSchema);
 
 /* ================= EXAM DATA FILE ================= */
 
@@ -87,6 +115,107 @@ const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
+});
+/* ================= AUTH APIs ================= */
+
+/* ---- REGISTER TEACHER ---- */
+app.post("/api/auth/register-teacher", async (req, res) => {
+  let { schoolCode, teacherId, password } = req.body;
+
+  schoolCode = schoolCode?.trim();
+  teacherId = teacherId?.trim();
+  password = password?.trim();
+
+  if (!schoolCode || !teacherId || !password)
+    return res.status(400).json({ msg: "Invalid input" });
+
+  const exists = await Teacher.findOne({ schoolCode, teacherId });
+  if (exists) return res.status(400).json({ msg: "Teacher already exists" });
+
+  const hash = await bcrypt.hash(password, 10);
+
+  await Teacher.create({ schoolCode, teacherId, password: hash });
+
+  res.json({ success: true });
+});
+
+
+/* ---- REGISTER STUDENT ---- */
+app.post("/api/auth/register-student", async (req, res) => {
+  let { schoolCode, studentId, class: stuClass, name, password } = req.body;
+
+  schoolCode = schoolCode?.trim();
+  studentId = studentId?.trim();
+  stuClass = stuClass?.trim();
+  name = name?.trim();
+  password = password?.trim();
+
+  if (!schoolCode || !studentId || !stuClass || !name || !password)
+    return res.status(400).json({ msg: "Invalid input" });
+
+  const exists = await Student.findOne({ schoolCode, studentId });
+  if (exists) return res.status(400).json({ msg: "Student already exists" });
+
+  const hash = await bcrypt.hash(password, 10);
+
+  await Student.create({
+    schoolCode,
+    studentId,
+    class: stuClass,
+    name,
+    password: hash
+  });
+
+  res.json({ success: true });
+});
+
+
+/* ---- TEACHER LOGIN ---- */
+app.post("/api/auth/teacher-login", async (req, res) => {
+  let { schoolCode, teacherId, password } = req.body;
+
+  schoolCode = schoolCode?.trim();
+  teacherId = teacherId?.trim();
+  password = password?.trim();
+
+  const teacher = await Teacher.findOne({ schoolCode, teacherId });
+  if (!teacher) return res.status(401).json({ msg: "Invalid login" });
+
+  const ok = await bcrypt.compare(password, teacher.password);
+  if (!ok) return res.status(401).json({ msg: "Invalid login" });
+
+  const token = jwt.sign(
+    { role: "teacher", schoolCode },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
+});
+
+
+/* ---- STUDENT LOGIN ---- */
+app.post("/api/auth/student-login", async (req, res) => {
+  let { schoolCode, studentId, class: stuClass, password } = req.body;
+
+  schoolCode = schoolCode?.trim();
+  studentId = studentId?.trim();
+  stuClass = stuClass?.trim();
+  password = password?.trim();
+
+  const student = await Student.findOne({ schoolCode, studentId, class: stuClass });
+  if (!student) return res.status(401).json({ msg: "Invalid login" });
+
+  const ok = await bcrypt.compare(password, student.password);
+  if (!ok) return res.status(401).json({ msg: "Invalid login" });
+
+  const token = jwt.sign(
+    { role: "student", schoolCode, class: stuClass },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
 });
 
 /* ================= AI QUESTION GENERATOR ================= */
