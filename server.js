@@ -7,6 +7,10 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+/* ✅ AUTH */
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs"); // (not used yet, for future MongoDB)
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -16,6 +20,33 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+/* ================= FAKE USERS (TEMP LOGIN) ================= */
+
+const teachers = [
+  { schoolCode: "ABC123", teacherId: "T001", password: "1234" }
+];
+
+const students = [
+  { schoolCode: "ABC123", studentId: "S001", class: "Class 5", password: "1234" }
+];
+
+/* ================= TOKEN VERIFY MIDDLEWARE ================= */
+
+function verifyToken(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ msg: "No token" });
+
+  const token = auth.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, "SECRET123");
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ msg: "Invalid token" });
+  }
+}
 
 /* ================= EXAM DATA FILE ================= */
 
@@ -88,6 +119,52 @@ const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
+
+/* ================= AUTH APIs ================= */
+
+app.post("/api/auth/teacher-login", (req, res) => {
+  const { schoolCode, teacherId, password } = req.body;
+
+  const teacher = teachers.find(
+    t => t.schoolCode === schoolCode && t.teacherId === teacherId
+  );
+
+  if (!teacher || teacher.password !== password) {
+    return res.status(401).json({ msg: "Invalid login" });
+  }
+
+  const token = jwt.sign(
+    { role: "teacher", schoolCode },
+    "SECRET123",
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
+});
+
+
+app.post("/api/auth/student-login", (req, res) => {
+  const { schoolCode, studentId, class: stuClass } = req.body;
+
+  const student = students.find(
+    s => s.schoolCode === schoolCode &&
+         s.studentId === studentId &&
+         s.class === stuClass
+  );
+
+  if (!student) {
+    return res.status(401).json({ msg: "Invalid login" });
+  }
+
+  const token = jwt.sign(
+    { role: "student", schoolCode, class: stuClass },
+    "SECRET123",
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token });
+});
+
 
 /* ================= AI QUESTION GENERATOR ================= */
 
@@ -238,7 +315,7 @@ and then answers.
 
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
 
-app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
+app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), (req, res) => {
   try {
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
@@ -277,28 +354,18 @@ app.get("/api/allExams", (req, res) => {
 });
 
 /* ================= ✅ STUDENT GET delete EXAM pdf================= */
-// app.delete("/api/deleteExam/:id", (req, res) => {
-//   const id = Number(req.params.id);
 
-//   allExams = allExams.filter(e => e.id !== id);
-
-//   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
-
-//   res.json({ success: true });
-// });
 app.delete("/api/deleteExam/:id", (req, res) => {
   const id = Number(req.params.id);
 
   const exam = allExams.find(e => e.id === id);
   if (!exam) return res.json({ success: false });
 
-  // ✅ DELETE PDF FILE
   const filePath = path.join(__dirname, exam.url);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
 
-  // ✅ DELETE FROM LIST
   allExams = allExams.filter(e => e.id !== id);
 
   fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
