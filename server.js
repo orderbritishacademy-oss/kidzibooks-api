@@ -420,15 +420,18 @@ and then answers.
     }
 
     const response = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: "You are a professional Indian school exam paper setter." },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.5
-    });
+  model: "gpt-4o-mini",   // more compatible
+  input: prompt,
+  temperature: 0.5
+});
 
-    const output = response.output_text;
+const output =
+  response.output_text ||
+  response.output?.[0]?.content?.[0]?.text ||
+  "";
+
+console.log("AI OUTPUT:", output.slice(0, 200));
+
 
     res.json({
       success: true,
