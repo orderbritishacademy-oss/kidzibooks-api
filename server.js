@@ -308,6 +308,51 @@ res.json({ token });
 
 });
 
+/* ---- STUDENT ONLINE PING (WHEN DASHBOARD OPENS) ---- */
+app.post("/api/auth/student-online", async (req, res) => {
+  try {
+    const { schoolCode, studentId } = req.body;
+
+    await Student.updateOne(
+      { schoolCode, studentId },
+      { 
+        $set: { 
+          isOnline: true, 
+          lastActive: new Date() 
+        } 
+      }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("STUDENT ONLINE ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+
+/* ---- STUDENT LOGOUT ---- */
+app.post("/api/auth/student-logout", async (req, res) => {
+  try {
+    const { schoolCode, studentId } = req.body;
+
+    await Student.updateOne(
+      { schoolCode, studentId },
+      { 
+        $set: { 
+          isOnline: false,
+          lastActive: new Date()
+        } 
+      }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("STUDENT LOGOUT ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
 /* ================= RESET PASSWORD ================= */
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
