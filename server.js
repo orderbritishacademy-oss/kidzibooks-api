@@ -41,10 +41,14 @@ const StudentSchema = new mongoose.Schema({
   name: String,
   password: String,
 
-  // ✅ ADD FOR RANKING
+  // ✅ PERFORMANCE DATA
   totalScore: { type: Number, default: 0 },
-  isOnline: { type: Boolean, default: false }
+  progress: { type: Number, default: 0 },   // %
+  level: { type: Number, default: 1 },
+  isOnline: { type: Boolean, default: false },
+  lastActive: { type: Date }
 });
+
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
@@ -375,11 +379,19 @@ app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
 /* ================= SAVE STUDENT SCORE ================= */
 app.post("/api/student/save-score", async (req, res) => {
   try {
-    const { schoolCode, studentId, score } = req.body;
+    const { schoolCode, studentId, score, progress, level } = req.body;
 
     await Student.updateOne(
       { schoolCode, studentId },
-      { $inc: { totalScore: score } }
+      {
+        $inc: { totalScore: score },
+        $set: {
+          progress: progress,
+          level: level,
+          isOnline: true,
+          lastActive: new Date()
+        }
+      }
     );
 
     res.json({ success: true });
@@ -388,6 +400,7 @@ app.post("/api/student/save-score", async (req, res) => {
     res.status(500).json({ msg: "Score save failed" });
   }
 });
+
 /* ================= CLASS RANKING (SAME SCHOOL + CLASS) ================= */
 app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
   try {
