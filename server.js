@@ -142,7 +142,7 @@ app.get("/", (req, res) => {
 /* ---- REGISTER SCHOOL ---- */
 app.post("/api/auth/register-school", async (req, res) => {
   try {
-    let { schoolName, schoolAddress, schoolId, phone, state, country, schoolCode, adminPasswor} = req.body;
+    let { schoolName, schoolAddress, schoolId, phone, state, country, schoolCode, adminPassword } = req.body;
 
     schoolName = schoolName?.trim();
     schoolAddress = schoolAddress?.trim();
