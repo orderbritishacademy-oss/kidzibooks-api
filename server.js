@@ -39,7 +39,11 @@ const StudentSchema = new mongoose.Schema({
   studentId: String,
   class: String,
   name: String,
-  password: String
+  password: String,
+
+  // ✅ ADD FOR RANKING
+  totalScore: { type: Number, default: 0 },
+  isOnline: { type: Boolean, default: false }
 });
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
@@ -283,15 +287,21 @@ app.post("/api/auth/student-login", async (req, res) => {
   if (!student) return res.status(401).json({ msg: "Invalid login" });
 
   const ok = await bcrypt.compare(password, student.password);
-  if (!ok) return res.status(401).json({ msg: "Invalid login" });
+if (!ok) return res.status(401).json({ msg: "Invalid login" });
 
-  const token = jwt.sign(
-    { role: "student", schoolCode, class: stuClass },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+await Student.updateOne(
+  { schoolCode, studentId },
+  { $set: { isOnline: true } }
+);
 
-  res.json({ token });
+const token = jwt.sign(
+  { role: "student", schoolCode, class: stuClass },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
+
+res.json({ token });
+
 });
 
 /* ================= RESET PASSWORD ================= */
@@ -362,6 +372,40 @@ app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
   }
 });
 
+/* ================= SAVE STUDENT SCORE ================= */
+app.post("/api/student/save-score", async (req, res) => {
+  try {
+    const { schoolCode, studentId, score } = req.body;
+
+    await Student.updateOne(
+      { schoolCode, studentId },
+      { $inc: { totalScore: score } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("SAVE SCORE ERROR:", err);
+    res.status(500).json({ msg: "Score save failed" });
+  }
+});
+/* ================= CLASS RANKING (SAME SCHOOL + CLASS) ================= */
+app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
+  try {
+    const { schoolCode, stuClass } = req.params;
+
+    const students = await Student.find(
+      { schoolCode, class: stuClass },
+      { password: 0 }
+    )
+      .sort({ totalScore: -1 })
+      .limit(50);
+
+    res.json(students);
+  } catch (err) {
+    console.error("RANKING ERROR:", err);
+    res.status(500).json({ msg: "Ranking fetch failed" });
+  }
+});
 
 /* ================= AI QUESTION GENERATOR ================= */
 app.post("/api/generate", async (req, res) => {
