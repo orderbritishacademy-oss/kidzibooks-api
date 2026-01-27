@@ -294,8 +294,59 @@ app.post("/api/auth/student-login", async (req, res) => {
   res.json({ token });
 });
 
-/* ================= AI QUESTION GENERATOR ================= */
+/* ================= RESET PASSWORD ================= */
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    let { role, schoolCode, teacherId, studentId, newPassword } = req.body;
 
+    schoolCode = schoolCode?.trim();
+    teacherId = teacherId?.trim();
+    studentId = studentId?.trim();
+    newPassword = newPassword?.trim();
+
+    if (!role || !schoolCode || !newPassword)
+      return res.status(400).json({ msg: "Invalid input" });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+
+    if (role === "school") {
+      const r = await School.updateOne(
+        { schoolCode },
+        { $set: { adminPassword: hash } }
+      );
+      if (!r.matchedCount) return res.status(404).json({ msg: "School not found" });
+    }
+
+    if (role === "teacher") {
+      if (!teacherId) return res.status(400).json({ msg: "Teacher ID required" });
+
+      const r = await Teacher.updateOne(
+        { schoolCode, teacherId },
+        { $set: { password: hash } }
+      );
+      if (!r.matchedCount) return res.status(404).json({ msg: "Teacher not found" });
+    }
+
+    if (role === "student") {
+      if (!studentId) return res.status(400).json({ msg: "Student ID required" });
+
+      const r = await Student.updateOne(
+        { schoolCode, studentId },
+        { $set: { password: hash } }
+      );
+      if (!r.matchedCount) return res.status(404).json({ msg: "Student not found" });
+    }
+
+    res.json({ success: true, msg: "Password updated successfully" });
+
+  } catch (err) {
+    console.error("RESET PASSWORD ERROR:", err);
+    res.status(500).json({ msg: "Password reset failed" });
+  }
+});
+
+
+/* ================= AI QUESTION GENERATOR ================= */
 app.post("/api/generate", async (req, res) => {
   try {
     const { studentClass, subject, topic, difficulty, type, count } = req.body;
