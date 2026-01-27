@@ -55,9 +55,15 @@ const Student = mongoose.model("Student", StudentSchema);
 
 /* ================= SCHOOL MODEL ================= */
 const SchoolSchema = new mongoose.Schema({
-  schoolName: String,
-  schoolCode: { type: String, unique: true },
-  adminPassword: String
+  schoolName: { type: String, required: true },
+  schoolAddress: String,
+  schoolId: { type: String, unique: true },
+  phone: String,
+  state: String,
+  country: String,
+
+  schoolCode: { type: String, unique: true, required: true },
+  adminPassword: { type: String, required: true }
 });
 const School = mongoose.model("School", SchoolSchema);
 
@@ -136,24 +142,37 @@ app.get("/", (req, res) => {
 /* ---- REGISTER SCHOOL ---- */
 app.post("/api/auth/register-school", async (req, res) => {
   try {
-    let { schoolName, schoolCode, adminPassword } = req.body;
+    let { schoolName, schoolAddress, schoolId, phone, state, country, schoolCode, adminPasswor} = req.body;
 
     schoolName = schoolName?.trim();
+    schoolAddress = schoolAddress?.trim();
+    schoolId = schoolId?.trim();
+    phone = phone?.trim();
+    state = state?.trim();
+    country = country?.trim();
     schoolCode = schoolCode?.trim();
     adminPassword = adminPassword?.trim();
-
-    if (!schoolName || !schoolCode || !adminPassword)
-      return res.status(400).json({ msg: "Invalid input" });
+    
+    if (!schoolName || !schoolId || !phone || !state || !country || !schoolCode || !adminPassword)
+  return res.status(400).json({ msg: "All fields required" });
 
     const exists = await School.findOne({ schoolCode });
     if (exists) return res.status(400).json({ msg: "School already exists" });
+    // ✅ check duplicate school ID
+    const idExists = await School.findOne({ schoolId });
+    if (idExists) return res.status(400).json({ msg: "School ID already exists" });
 
-    const hash = await bcrypt.hash(adminPassword, 10);
+    // const hash = await bcrypt.hash(adminPassword, 10);
 
     await School.create({
       schoolName,
+      schoolAddress,
+      schoolId,
+      phone,
+      state,
+      country,
       schoolCode,
-      adminPassword: hash
+      adminPassword
     });
 
     res.json({ success: true });
@@ -177,8 +196,10 @@ app.post("/api/auth/school-login", async (req, res) => {
     const school = await School.findOne({ schoolCode });
     if (!school) return res.status(401).json({ msg: "Invalid school code" });
 
-    const ok = await bcrypt.compare(adminPassword, school.adminPassword);
-    if (!ok) return res.status(401).json({ msg: "Wrong password" });
+    // const ok = await bcrypt.compare(adminPassword, school.adminPassword);
+    // if (!ok) return res.status(401).json({ msg: "Wrong password" });
+    if (adminPassword !== school.adminPassword)
+      return res.status(401).json({ msg: "Wrong password" });
 
     const token = jwt.sign(
       { role: "school", schoolCode },
@@ -212,10 +233,10 @@ app.post("/api/auth/register-teacher", async (req, res) => {
 
   if (exists) return res.status(400).json({ msg: "Teacher already exists" });
 
-  const hash = await bcrypt.hash(password, 10);
+  // const hash = await bcrypt.hash(password, 10);
 
-  await Teacher.create({ schoolCode, teacherId, password: hash });
-
+  // await Teacher.create({ schoolCode, teacherId, password: hash });
+  await Teacher.create({ schoolCode, teacherId, password });
   res.json({ success: true });
 });
 
@@ -240,14 +261,15 @@ app.post("/api/auth/register-student", async (req, res) => {
 
   if (exists) return res.status(400).json({ msg: "Student already exists" });
 
-  const hash = await bcrypt.hash(password, 10);
+  // const hash = await bcrypt.hash(password, 10);
 
   await Student.create({
     schoolCode,
     studentId,
     class: stuClass,
     name,
-    password: hash
+    password
+    // password: hash
   });
 
   res.json({ success: true });
@@ -265,8 +287,10 @@ app.post("/api/auth/teacher-login", async (req, res) => {
   const teacher = await Teacher.findOne({ schoolCode, teacherId });
   if (!teacher) return res.status(401).json({ msg: "Invalid login" });
 
-  const ok = await bcrypt.compare(password, teacher.password);
-  if (!ok) return res.status(401).json({ msg: "Invalid login" });
+  // const ok = await bcrypt.compare(password, teacher.password);
+  // if (!ok) return res.status(401).json({ msg: "Invalid login" });
+  if (password !== teacher.password)
+    return res.status(401).json({ msg: "Invalid login" });
 
   const token = jwt.sign(
     { role: "teacher", schoolCode },
@@ -290,9 +314,11 @@ app.post("/api/auth/student-login", async (req, res) => {
   const student = await Student.findOne({ schoolCode, studentId, class: stuClass });
   if (!student) return res.status(401).json({ msg: "Invalid login" });
 
-  const ok = await bcrypt.compare(password, student.password);
-if (!ok) return res.status(401).json({ msg: "Invalid login" });
-
+//   const ok = await bcrypt.compare(password, student.password);
+// if (!ok) return res.status(401).json({ msg: "Invalid login" });
+  if (password !== student.password)
+    return res.status(401).json({ msg: "Invalid login" });
+  
 await Student.updateOne(
   { schoolCode, studentId },
   { $set: { isOnline: true } }
@@ -372,12 +398,12 @@ app.post("/api/auth/reset-password", async (req, res) => {
     if (!role || !schoolCode || !newPassword)
       return res.status(400).json({ msg: "Invalid input" });
 
-    const hash = await bcrypt.hash(newPassword, 10);
+    // const hash = await bcrypt.hash(newPassword, 10);
 
     if (role === "school") {
       const r = await School.updateOne(
         { schoolCode },
-        { $set: { adminPassword: hash } }
+        { $set: { adminPassword: newPassword } }
       );
       if (!r.matchedCount) return res.status(404).json({ msg: "School not found" });
     }
@@ -387,7 +413,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
       const r = await Teacher.updateOne(
         { schoolCode, teacherId },
-        { $set: { password: hash } }
+        { $set: { password: newPassword } }
       );
       if (!r.matchedCount) return res.status(404).json({ msg: "Teacher not found" });
     }
@@ -397,7 +423,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
       const r = await Student.updateOne(
         { schoolCode, studentId },
-        { $set: { password: hash } }
+        { $set: { password: newPassword }}
       );
       if (!r.matchedCount) return res.status(404).json({ msg: "Student not found" });
     }
