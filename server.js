@@ -304,7 +304,13 @@ const token = jwt.sign(
   { expiresIn: "7d" }
 );
 
-res.json({ token });
+res.json({
+  token,
+  name: student.name,          // ✅ SEND NAME
+  studentId: student.studentId,
+  class: student.class
+});
+
 
 });
 
