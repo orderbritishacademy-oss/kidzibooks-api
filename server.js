@@ -345,6 +345,23 @@ app.post("/api/auth/reset-password", async (req, res) => {
   }
 });
 
+/* ================= GET STUDENTS CLASS-WISE ================= */
+app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
+  try {
+    const { schoolCode, stuClass } = req.params;
+
+    const students = await Student.find(
+      { schoolCode, class: stuClass },
+      { password: 0 } // ❌ do not send password
+    );
+
+    res.json(students);
+  } catch (err) {
+    console.error("GET STUDENTS ERROR:", err);
+    res.status(500).json({ msg: "Failed to load students" });
+  }
+});
+
 
 /* ================= AI QUESTION GENERATOR ================= */
 app.post("/api/generate", async (req, res) => {
