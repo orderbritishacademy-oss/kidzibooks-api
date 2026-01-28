@@ -595,6 +595,25 @@ app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
     res.status(500).json({ msg: "Ranking fetch failed" });
   }
 });
+/* ================= GET STUDENT PROFILE ================= */
+app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
+  try {
+    const { schoolCode, studentId } = req.params;
+
+    const student = await Student.findOne(
+      { schoolCode, studentId },
+      { password: 0 }
+    );
+
+    if (!student) return res.status(404).json({ msg: "Student not found" });
+
+    res.json({ student });
+
+  } catch (err) {
+    console.error("PROFILE ERROR:", err);
+    res.status(500).json({ msg: "Profile load failed" });
+  }
+});
 
 /* ================= AI QUESTION GENERATOR ================= */
 app.post("/api/generate", async (req, res) => {
