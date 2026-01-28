@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -53,6 +52,16 @@ const StudentSchema = new mongoose.Schema({
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
+
+/* ================= SUBJECT + CHAPTER MODEL ================= */
+const SubjectSchema = new mongoose.Schema({
+  schoolCode: String,
+  class: String,
+  subject: String,
+  chapters: [String]
+});
+
+const Subject = mongoose.model("Subject", SubjectSchema);
 
 /* ================= SCHOOL MODEL ================= */
 const SchoolSchema = new mongoose.Schema({
@@ -436,6 +445,95 @@ app.post("/api/auth/reset-password", async (req, res) => {
     res.status(500).json({ msg: "Password reset failed" });
   }
 });
+
+/* ================= SAVE SUBJECT & CHAPTER ================= */
+app.post("/api/addSubjectChapter", async (req, res) => {
+  try {
+    const { schoolCode, className, subject, chapter } = req.body;
+
+    if (!schoolCode || !className || !subject)
+      return res.status(400).json({ success: false });
+
+    let doc = await Subject.findOne({ schoolCode, class: className, subject });
+
+    if (!doc) {
+      doc = new Subject({
+        schoolCode,
+        class: className,
+        subject,
+        chapters: chapter ? [chapter] : []
+      });
+    } else if (chapter && !doc.chapters.includes(chapter)) {
+      doc.chapters.push(chapter);
+    }
+
+    await doc.save();
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("ADD SUBJECT ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+/* ================= GET SUBJECTS & CHAPTERS ================= */
+app.get("/api/subjects/:schoolCode/:className", async (req, res) => {
+  try {
+    const { schoolCode, className } = req.params;
+
+    const list = await Subject.find({ schoolCode, class: className });
+    res.json(list);
+
+  } catch (err) {
+    console.error("LOAD SUBJECT ERROR:", err);
+    res.status(500).json([]);
+  }
+});
+/* ================= DELETE FULL SUBJECT ================= */
+app.delete("/api/deleteSubject/:schoolCode/:className/:subject", async (req, res) => {
+  try {
+    const { schoolCode, className, subject } = req.params;
+
+    await Subject.deleteOne({ schoolCode, class: className, subject });
+
+    // ❗ also delete exams from FILE
+    allExams = allExams.filter(
+      e => !(e.class === className && e.subject === subject)
+    );
+
+    fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("DELETE SUBJECT ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+/* ================= DELETE ONLY CHAPTER ================= */
+app.delete("/api/deleteChapter", async (req, res) => {
+  try {
+    const { schoolCode, className, subject, chapter } = req.body;
+
+    await Subject.updateOne(
+      { schoolCode, class: className, subject },
+      { $pull: { chapters: chapter } }
+    );
+
+    // ❗ delete only that chapter exams from FILE
+    allExams = allExams.filter(
+      e => !(e.class === className && e.subject === subject && e.chapter === chapter)
+    );
+
+    fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("DELETE CHAPTER ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
 
 /* ================= GET STUDENTS CLASS-WISE ================= */
 app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
