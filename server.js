@@ -1,3 +1,4 @@
+
 const express = require("express");
 const cors = require("cors");
 const OpenAI = require("openai");
@@ -621,17 +622,16 @@ and then answers.
 `;
     }
 
-   const completion = await openai.chat.completions.create({
-  model: "gpt-4o-mini",
-  messages: [
-    { role: "system", content: "You are a teacher." },
-    { role: "user", content: prompt }
-  ],
+    const response = await openai.responses.create({
+  model: "gpt-4o-mini",   // more compatible
+  input: prompt,
   temperature: 0.5
 });
 
-const output = completion.choices[0].message.content;
-
+const output =
+  response.output_text ||
+  response.output?.[0]?.content?.[0]?.text ||
+  "";
 
 console.log("AI OUTPUT:", output.slice(0, 200));
 
