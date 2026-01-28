@@ -621,16 +621,17 @@ and then answers.
 `;
     }
 
-    const response = await openai.responses.create({
-  model: "gpt-4o-mini",   // more compatible
-  input: prompt,
+   const completion = await openai.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [
+    { role: "system", content: "You are a teacher." },
+    { role: "user", content: prompt }
+  ],
   temperature: 0.5
 });
 
-const output =
-  response.output_text ||
-  response.output?.[0]?.content?.[0]?.text ||
-  "";
+const output = completion.choices[0].message.content;
+
 
 console.log("AI OUTPUT:", output.slice(0, 200));
 
