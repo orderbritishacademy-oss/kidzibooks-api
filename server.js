@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const OpenAI = require("openai");
+// const OpenAI = require("openai");
 
 /* ✅ PDF UPLOAD */
 const multer = require("multer");
@@ -22,8 +22,13 @@ mongoose.connect(process.env.MONGO_URI)
 
 /* ================= OPENAI ================= */
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+// const openai = new OpenAI({
+//   apiKey: process.env.OPENAI_API_KEY
+// });
+/* ================= GROQ_API_KEY ================= */
+const Groq = require("groq-sdk");
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
 });
 
 /* ================= USER MODELS ================= */
@@ -720,16 +725,28 @@ and then answers.
 `;
     }
 
-    const response = await openai.responses.create({
-  model: "gpt-4o-mini",   // more compatible
-  input: prompt,
+//     const response = await openai.responses.create({
+//   model: "gpt-4o-mini",   // more compatible
+//   input: prompt,
+//   temperature: 0.5
+// });
+
+// const output =
+//   response.output_text ||
+//   response.output?.[0]?.content?.[0]?.text ||
+//   "";
+    // =============================================================================
+    const completion = await groq.chat.completions.create({
+  model: "llama3-70b-8192",
+  messages: [
+    { role: "system", content: "You are a CBSE school teacher." },
+    { role: "user", content: prompt }
+  ],
   temperature: 0.5
 });
 
-const output =
-  response.output_text ||
-  response.output?.[0]?.content?.[0]?.text ||
-  "";
+const output = completion.choices[0].message.content;
+// ======================================================================
 
 console.log("AI OUTPUT:", output.slice(0, 200));
 
