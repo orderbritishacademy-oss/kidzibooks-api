@@ -755,7 +755,7 @@ and then answers.
 //   response.output?.[0]?.content?.[0]?.text ||
 //   "";
 const chat = await groq.chat.completions.create({
-  model: "llama3-70b-8192", // ⭐ BEST FREE MODEL
+ model: "llama-3.1-8b-instant", // ⭐ BEST FREE MODEL
   messages: [
     {
       role: "user",
