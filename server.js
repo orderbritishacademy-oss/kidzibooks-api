@@ -739,8 +739,22 @@ SECTION C: Fill in the Blanks
 Generate EXACTLY ${count} Fill in the Blanks questions.
 
 SECTION D: Match the Following
-Generate EXACTLY ${count} Match the Following sets.
-Each set must have Column A and Column B.
+IMPORTANT – FOLLOW STRICTLY:
+- Create ONLY ONE Match the Following question
+- DO NOT create Set 1, Set 2, or multiple tables
+- The number ${count} means MATCHING PAIRS IN ONE SET
+- Generate EXACTLY ${count} matching pairs
+- Use numbers (1, 2, 3...) for Column A
+- Use letters (a, b, c...) for Column B
+- Do NOT repeat items in Column A or Column B
+
+FORMAT (FOLLOW STRICTLY):
+Column A                     Column B
+1. Item from Column A        a) Matching item
+2. Item from Column A        b) Matching item
+3. Item from Column A        c) Matching item
+... continue until EXACTLY ${count} pairs are completed
+
 
 SECTION E: Descriptive Questions
 Generate EXACTLY ${count} Descriptive questions.
