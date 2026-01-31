@@ -724,6 +724,7 @@ VERY IMPORTANT – FOLLOW STRICTLY:
 - EACH section must contain EXACTLY ${count} questions
 - DO NOT add extra or fewer questions
 - DO NOT mix question types between sections
+- Do NOT use #, ##, ###, *, **, ---, ___, bullets
 
 Start the paper EXACTLY like this:
 
