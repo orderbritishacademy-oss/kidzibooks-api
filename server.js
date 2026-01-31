@@ -655,9 +655,62 @@ STUDY NOTES – ${topic.toUpperCase()}
 Then give topic-wise explanation.
 `;
     }
+//     else if (type === "ALL") {
+
+//       prompt = `
+// Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
+
+// Class: ${studentClass}
+// Subject: ${subject}
+// Topic: ${topic}
+// Difficulty Level: ${difficulty}
+
+// IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
+// - Use ONLY plain text
+// - Do NOT use #, ##, ###, *, **, ---, ___, bullets
+// - Show topic name at the top in UPPERCASE
+// - Use clear SECTION headings (plain text)
+// - Proper question numbering (1, 2, 3)
+// - Student-friendly language
+// - Do NOT mix answers with questions
+// - Add a separate ANSWER KEY at the end
+// - For Match the Following, show two clear columns
+// - All questions must be strictly from given SUBJECT and TOPIC
+
+// Start the paper EXACTLY like this:
+
+// QUESTION PAPER – ${topic.toUpperCase()}
+
+// Then generate around ${count} total questions in following sections:
+
+// SECTION A: MCQs
+// SECTION B: True / False
+// SECTION C: Fill in the Blanks
+// SECTION D: Match the Following
+// SECTION E: Descriptive Questions
+
+// DESCRIPTIVE QUESTIONS RULES:
+// - Use Explain, Describe, Why, Write a short note
+// - Mix short and long answer questions
+
+// MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
+
+// Match the items in Column A with Column B.
+
+// Column A                     Column B
+// a) Item from Column A        1) Item from Column B
+// b) Item from Column A        2) Item from Column B
+// c) Item from Column A        3) Item from Column B
+// d) Item from Column A        4) Item from Column B
+
+// After all questions write:
+
+// ANSWER KEY
+// and give answers section-wise.
+// `;
     else if (type === "ALL") {
 
-      prompt = `
+  prompt = `
 Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
 
 Class: ${studentClass}
@@ -665,48 +718,44 @@ Subject: ${subject}
 Topic: ${topic}
 Difficulty Level: ${difficulty}
 
-IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
-- Use ONLY plain text
-- Do NOT use #, ##, ###, *, **, ---, ___, bullets
-- Show topic name at the top in UPPERCASE
-- Use clear SECTION headings (plain text)
-- Proper question numbering (1, 2, 3)
-- Student-friendly language
-- Do NOT mix answers with questions
-- Add a separate ANSWER KEY at the end
-- For Match the Following, show two clear columns
-- All questions must be strictly from given SUBJECT and TOPIC
+VERY IMPORTANT – FOLLOW STRICTLY:
+- The number ${count} means QUESTIONS PER SECTION
+- DO NOT treat ${count} as total questions
+- EACH section must contain EXACTLY ${count} questions
+- DO NOT add extra or fewer questions
+- DO NOT mix question types between sections
 
 Start the paper EXACTLY like this:
 
 QUESTION PAPER – ${topic.toUpperCase()}
 
-Then generate around ${count} total questions in following sections:
-
 SECTION A: MCQs
+Generate EXACTLY ${count} MCQ questions.
+
 SECTION B: True / False
+Generate EXACTLY ${count} True / False questions.
+
 SECTION C: Fill in the Blanks
+Generate EXACTLY ${count} Fill in the Blanks questions.
+
 SECTION D: Match the Following
+Generate EXACTLY ${count} Match the Following sets.
+Each set must have Column A and Column B.
+
 SECTION E: Descriptive Questions
+Generate EXACTLY ${count} Descriptive questions.
+Use Explain / Describe / Why / Short note.
 
-DESCRIPTIVE QUESTIONS RULES:
-- Use Explain, Describe, Why, Write a short note
-- Mix short and long answer questions
+FORMAT RULES:
+- Plain text only
+- Proper numbering in each section
+- Questions must be strictly from the given topic
+- Student-friendly language
 
-MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
-
-Match the items in Column A with Column B.
-
-Column A                     Column B
-a) Item from Column A        1) Item from Column B
-b) Item from Column A        2) Item from Column B
-c) Item from Column A        3) Item from Column B
-d) Item from Column A        4) Item from Column B
-
-After all questions write:
+After ALL sections, write:
 
 ANSWER KEY
-and give answers section-wise.
+Provide answers section-wise.
 `;
     } else {
       prompt = `
