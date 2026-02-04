@@ -624,6 +624,7 @@ app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
 app.post("/api/generate", async (req, res) => {
   try {
     const { studentClass, subject, topic, difficulty, type, count } = req.body;
+    const { message } = req.body;  /* ====== AI Conversation =========== */
 
     if (!studentClass || !subject || !topic || !difficulty || !type || !count) {
       return res.status(400).json({ success: false });
@@ -708,6 +709,33 @@ Then give topic-wise explanation.
 // ANSWER KEY
 // and give answers section-wise.
 // `;
+ // =================start conversartion code =====================//
+      else if (type === "CONVERSATION" || type === "CHAT") {
+  prompt = `
+You are a friendly AI English speaking assistant like ChatGPT.
+
+This is a LIVE conversation to help the student practice spoken English.
+
+STRICT RULES:
+- Talk naturally like a human
+- Keep replies short (1–2 sentences)
+- Correct mistakes politely
+- Ask ONLY ONE follow-up question
+- Do NOT create question papers
+- Do NOT number questions
+- Do NOT give answer keys
+- Do NOT be formal or exam-like
+
+Student class: ${studentClass}
+
+Student just said:
+"${message}"
+
+Reply in simple English.
+Then ask ONE friendly follow-up question.
+`;
+}
+// =================end conversartion else if blok code =====================//
     else if (type === "ALL") {
 
   prompt = `
