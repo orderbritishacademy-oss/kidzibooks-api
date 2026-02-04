@@ -735,6 +735,91 @@ Reply in simple English.
 Then ask ONE friendly follow-up question.
 `;
 }
+        // =================start CODING else if blok code =====================//
+        else if (type === "CODING") {
+  prompt = `
+You are a coding teacher for school students.
+
+Language: ${topic}
+Student Class: ${studentClass}
+Difficulty: ${difficulty}
+
+STRICT RULES:
+- Ask ONLY ONE coding PRACTICE question
+- Question MUST match the student class level
+- Question MUST match the programming language
+- Do NOT include answers
+- Do NOT include explanations
+- Do NOT include numbering or sections
+- Keep language simple and student-friendly
+
+CLASS LEVEL GUIDE:
+- Class 1–2: very basic (tags, print text, simple output)
+- Class 3–4: small logic, simple structure
+- Class 5–6: loops, simple conditions
+- Class 7–8: functions, basic logic
+- Class 9–12: logic + structure
+- Pro: real-world tasks
+
+Return EXACTLY in this format (NO extra text):
+
+QUESTION:
+<one clear coding question>
+
+STARTER_CODE:
+<starter code if helpful, otherwise leave empty>
+
+EXAMPLES (DO NOT COPY):
+
+HTML:
+QUESTION:
+Write all heading tags with your name
+STARTER_CODE:
+<h1></h1>
+
+CSS:
+QUESTION:
+Change background color to blue
+STARTER_CODE:
+body {
+
+}
+
+JavaScript:
+QUESTION:
+Print numbers from 1 to 5
+STARTER_CODE:
+for(let i=1;i<=5;i++){
+
+}
+
+Python:
+QUESTION:
+Print your name
+STARTER_CODE:
+print("")
+
+C:
+QUESTION:
+Print Hello World
+STARTER_CODE:
+#include <stdio.h>
+int main() {
+
+}
+
+C++:
+QUESTION:
+Print numbers from 1 to 10
+STARTER_CODE:
+#include <iostream>
+using namespace std;
+int main() {
+
+}
+`;
+}
+
 // =================end conversartion else if blok code =====================//
     else if (type === "ALL") {
 
