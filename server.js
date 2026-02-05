@@ -735,8 +735,8 @@ Reply in simple English.
 Then ask ONE friendly follow-up question.
 `;
 }
-      // =================start CODING else if blok code =====================//
-       else if (type === "CODING") {
+  // =================start CODING else if blok code =====================//
+     else if (type === "CODING") {
   const { language } = req.body;
 
   prompt = `
@@ -747,23 +747,25 @@ STUDENT DETAILS:
 - Programming Language: ${language}
 - Difficulty: ${difficulty}
 
-STRICT RULES (NO EXCEPTIONS):
+STRICT RULES:
 - Ask ONLY ONE coding practice question
 - Question MUST match class level
 - Question MUST match programming language
 - NEVER mix languages
 - NEVER go above the level
-- NO answers
-- NO explanations
-- NO numbering
+- Do NOT explain anything
 - Simple student-friendly language
+
+IMPORTANT:
+- AFTER the student solves, the correct answer must be shown
+- So you MUST also provide the RIGHT ANSWER CODE
 
 ========================
 CLASS & LANGUAGE RULES
 ========================
 
 Class 1–2:
-- HTML: ALL heading tags: h1, h2, h3, h4, h5, h6, Can also use <p> paragraph
+- HTML: ALL heading tags h1–h6, can also use <p>
 - JS: console.log only
 - Python: print only
 - C: print Hello World
@@ -778,8 +780,8 @@ Class 3–4:
 
 Class 5–6:
 - HTML: lists, bold, italic
-- JS: if condition, simple loop
-- Python: if condition, simple loop
+- JS: if condition OR simple loop
+- Python: if condition OR simple loop
 - C: if condition OR simple loop
 - C++: if condition OR simple loop
 
@@ -810,12 +812,15 @@ QUESTION:
 STARTER_CODE:
 <starter code if helpful, otherwise empty>
 
+ANSWER_CODE:
+<correct solution code only>
+
 ========================
 STARTER CODE RULES
 ========================
 
 HTML:
-<h1></h1>
+<!-- Write your HTML here -->
 
 JavaScript:
 console.log("");
@@ -839,6 +844,7 @@ int main() {
 }
 `;
 }
+
 
 
 // =================end conversartion else if blok code =====================//
