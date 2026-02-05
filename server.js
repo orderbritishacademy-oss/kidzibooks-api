@@ -801,7 +801,7 @@ Class 9–12:
 
 Pro:
 - Real-world problem using ${language}
-
+Return EXACTLY in this format (NO extra text):
 ========================
 OUTPUT FORMAT (STRICT)
 ========================
