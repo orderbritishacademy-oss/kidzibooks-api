@@ -763,7 +763,7 @@ CLASS & LANGUAGE RULES
 ========================
 
 Class 1–2:
-- HTML: one heading or paragraph
+- HTML: ALL heading tags: h1, h2, h3, h4, h5, h6, Can also use <p> paragraph
 - JS: console.log only
 - Python: print only
 - C: print Hello World
