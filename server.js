@@ -735,90 +735,111 @@ Reply in simple English.
 Then ask ONE friendly follow-up question.
 `;
 }
-        // =================start CODING else if blok code =====================//
-        else if (type === "CODING") {
+      // =================start CODING else if blok code =====================//
+       else if (type === "CODING") {
+  const { language } = req.body;
+
   prompt = `
-You are a coding teacher for school students.
+You are a VERY STRICT coding teacher for school students.
 
-Language: ${topic}
-Student Class: ${studentClass}
-Difficulty: ${difficulty}
+STUDENT DETAILS:
+- Class Level: ${studentClass}
+- Programming Language: ${language}
+- Difficulty: ${difficulty}
 
-STRICT RULES:
-- Ask ONLY ONE coding PRACTICE question
-- Question MUST match the student class level
-- Question MUST match the programming language
-- Do NOT include answers
-- Do NOT include explanations
-- Do NOT include numbering or sections
-- Keep language simple and student-friendly
+STRICT RULES (NO EXCEPTIONS):
+- Ask ONLY ONE coding practice question
+- Question MUST match class level
+- Question MUST match programming language
+- NEVER mix languages
+- NEVER go above the level
+- NO answers
+- NO explanations
+- NO numbering
+- Simple student-friendly language
 
-CLASS LEVEL GUIDE:
-- Class 1–2: very basic (tags, print text, simple output)
-- Class 3–4: small logic, simple structure
-- Class 5–6: loops, simple conditions
-- Class 7–8: functions, basic logic
-- Class 9–12: logic + structure
-- Pro: real-world tasks
+========================
+CLASS & LANGUAGE RULES
+========================
 
-Return EXACTLY in this format (NO extra text):
+Class 1–2:
+- HTML: one heading or paragraph
+- JS: console.log only
+- Python: print only
+- C: print Hello World
+- C++: print Hello World
+
+Class 3–4:
+- HTML: multiple headings, line breaks
+- JS: variables + console.log
+- Python: variables + print
+- C: printf with variable
+- C++: cout with variable
+
+Class 5–6:
+- HTML: lists, bold, italic
+- JS: if condition, simple loop
+- Python: if condition, simple loop
+- C: if condition OR simple loop
+- C++: if condition OR simple loop
+
+Class 7–8:
+- HTML: tables, links, images
+- JS: loops + functions
+- Python: loops + functions
+- C: loops + simple function
+- C++: loops + simple function
+
+Class 9–12:
+- HTML: form, input, table
+- JS: functions + arrays
+- Python: functions + lists
+- C: arrays + loops
+- C++: arrays + loops
+
+Pro:
+- Real-world problem using ${language}
+
+========================
+OUTPUT FORMAT (STRICT)
+========================
 
 QUESTION:
 <one clear coding question>
 
 STARTER_CODE:
-<starter code if helpful, otherwise leave empty>
+<starter code if helpful, otherwise empty>
 
-EXAMPLES (DO NOT COPY):
+========================
+STARTER CODE RULES
+========================
 
 HTML:
-QUESTION:
-Write all heading tags with your name
-STARTER_CODE:
 <h1></h1>
 
-CSS:
-QUESTION:
-Change background color to blue
-STARTER_CODE:
-body {
-
-}
-
 JavaScript:
-QUESTION:
-Print numbers from 1 to 5
-STARTER_CODE:
-for(let i=1;i<=5;i++){
-
-}
+console.log("");
 
 Python:
-QUESTION:
-Print your name
-STARTER_CODE:
 print("")
 
 C:
-QUESTION:
-Print Hello World
-STARTER_CODE:
 #include <stdio.h>
 int main() {
 
+  return 0;
 }
 
 C++:
-QUESTION:
-Print numbers from 1 to 10
-STARTER_CODE:
 #include <iostream>
 using namespace std;
 int main() {
 
+  return 0;
 }
 `;
 }
+
 
 // =================end conversartion else if blok code =====================//
     else if (type === "ALL") {
