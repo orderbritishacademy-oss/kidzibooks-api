@@ -753,7 +753,8 @@ STRICT RULES:
 - Question MUST match programming language
 - NEVER mix languages
 - NEVER go above the level
-- Do NOT explain anything
+- Do NOT explain anything in words
+- Provide ONLY code inside ANSWER_CODE
 - Simple student-friendly language
 
 IMPORTANT:
@@ -805,7 +806,6 @@ Return EXACTLY in this format (NO extra text):
 ========================
 OUTPUT FORMAT (STRICT)
 ========================
-
 QUESTION:
 <one clear coding question>
 
