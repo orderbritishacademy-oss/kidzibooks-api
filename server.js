@@ -7,7 +7,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 /* ✅ poppler pdf */
-const pdf = require("pdf-poppler");
+// const pdf = require("pdf-poppler");
 
 /* ✅ AUTH + DB */
 const mongoose = require("mongoose");
@@ -24,23 +24,6 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error("❌ MongoDB Error:", err));
 
 /* ================= convertPDFToImages ===== show pdf images options============ */
-async function convertPDFToImages(pdfPath, outputDir) {
-  const opts = {
-    format: "jpeg",
-    out_dir: outputDir,
-    out_prefix: "page",
-    page: null
-  };
-
-  await pdf.convert(pdfPath, opts);
-
-  const files = fs.readdirSync(outputDir)
-    .filter(f => f.endsWith(".jpg"))
-    .map(f => `/exam_uploads/${f}`);
-
-  return files;
-}
-
 /* ================= OPENAI ================= */
 
 // const openai = new OpenAI({
@@ -1010,28 +993,10 @@ console.log("AI OUTPUT:", output.slice(0, 200));
 // app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
 app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
   try {
+
     const fileUrl = `/exam_uploads/${req.file.filename}`;
-    // ============================pageImages========================================
-    const pdfPath = path.join(examUploadDir, req.file.filename);
-    
-    const pageImages = await convertPDFToImages(
-      pdfPath,
-      examUploadDir
-    );
-// =======================================end pageImages============================================
     const meta = JSON.parse(req.body.meta || "{}");
 
-    // const newExam = {
-    //   id: Date.now(),
-    //   name: req.file.originalname,
-    //   url: fileUrl,
-    //   class: meta.class,
-    //   subject: meta.subject,
-    //   chapter: meta.chapter,
-    //   questions: meta.questions || [],
-    //   answers: meta.answers || {},
-    //   createdAt: new Date()
-    // };
     const newExam = {
       id: Date.now(),
       name: req.file.originalname,
@@ -1039,11 +1004,14 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
       class: meta.class,
       subject: meta.subject,
       chapter: meta.chapter,
+
+      // ✅ supports both text + image questions
       questions: meta.questions || [],
       answers: meta.answers || {},
-      pageImages: pageImages   // ✅ ADD THIS LINE
-    };
 
+      // ✅ images already generated in frontend
+      pageImages: meta.pageImages || []
+    };
 
     allExams.push(newExam);
 
@@ -1058,6 +1026,7 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+
 
 
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
