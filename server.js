@@ -996,22 +996,35 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
 
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
+    
+    // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
+    const fixedQuestions = (meta.questions || []).map(q => ({
+      question: q.question || "",
+      image: q.image || null,
+    
+      options: (q.options || []).map(opt => {
+        if (!opt) return "";
+    
+        // keep text as it is
+        if (typeof opt === "string") return opt;
+    
+        return "";
+      })
+    }));
 
-    const newExam = {
-      id: Date.now(),
-      name: req.file.originalname,
-      url: fileUrl,
-      class: meta.class,
-      subject: meta.subject,
-      chapter: meta.chapter,
+     const newExam = {
+        id: Date.now(),
+        name: req.file.originalname,
+        url: fileUrl,
+        class: meta.class,
+        subject: meta.subject,
+        chapter: meta.chapter,
+      
+        questions: fixedQuestions,
+        answers: meta.answers || {},
+        pageImages: meta.pageImages || []
+      };
 
-      // ✅ supports both text + image questions
-      questions: meta.questions || [],
-      answers: meta.answers || {},
-
-      // ✅ images already generated in frontend
-      pageImages: meta.pageImages || []
-    };
 
     allExams.push(newExam);
 
