@@ -6,6 +6,9 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+/* ✅ poppler pdf */
+const pdf = require("pdf-poppler");
+
 /* ✅ AUTH + DB */
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
@@ -19,6 +22,24 @@ app.use(express.json());
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
+
+/* ================= convertPDFToImages ===== show pdf images options============ */
+async function convertPDFToImages(pdfPath, outputDir) {
+  const opts = {
+    format: "jpeg",
+    out_dir: outputDir,
+    out_prefix: "page",
+    page: null
+  };
+
+  await pdf.convert(pdfPath, opts);
+
+  const files = fs.readdirSync(outputDir)
+    .filter(f => f.endsWith(".jpg"))
+    .map(f => `/exam_uploads/${f}`);
+
+  return files;
+}
 
 /* ================= OPENAI ================= */
 
@@ -844,9 +865,6 @@ int main() {
 }
 `;
 }
-
-
-
 // =================end conversartion else if blok code =====================//
     else if (type === "ALL") {
 
@@ -989,11 +1007,31 @@ console.log("AI OUTPUT:", output.slice(0, 200));
 
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
 
-app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
+// app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
+app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
   try {
     const fileUrl = `/exam_uploads/${req.file.filename}`;
+    // ============================pageImages========================================
+    const pdfPath = path.join(examUploadDir, req.file.filename);
+    
+    const pageImages = await convertPDFToImages(
+      pdfPath,
+      examUploadDir
+    );
+// =======================================end pageImages============================================
     const meta = JSON.parse(req.body.meta || "{}");
 
+    // const newExam = {
+    //   id: Date.now(),
+    //   name: req.file.originalname,
+    //   url: fileUrl,
+    //   class: meta.class,
+    //   subject: meta.subject,
+    //   chapter: meta.chapter,
+    //   questions: meta.questions || [],
+    //   answers: meta.answers || {},
+    //   createdAt: new Date()
+    // };
     const newExam = {
       id: Date.now(),
       name: req.file.originalname,
@@ -1003,8 +1041,9 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
       chapter: meta.chapter,
       questions: meta.questions || [],
       answers: meta.answers || {},
-      createdAt: new Date()
+      pageImages: pageImages   // ✅ ADD THIS LINE
     };
+
 
     allExams.push(newExam);
 
