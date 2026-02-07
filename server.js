@@ -294,7 +294,6 @@ app.post("/api/auth/register-student", async (req, res) => {
   res.json({ success: true });
 });
 
-
 /* ---- TEACHER LOGIN ---- */
 app.post("/api/auth/teacher-login", async (req, res) => {
   let { schoolCode, teacherId, password } = req.body;
@@ -306,10 +305,11 @@ app.post("/api/auth/teacher-login", async (req, res) => {
   const teacher = await Teacher.findOne({ schoolCode, teacherId });
   if (!teacher) return res.status(401).json({ msg: "Invalid login" });
 
-  // const ok = await bcrypt.compare(password, teacher.password);
-  // if (!ok) return res.status(401).json({ msg: "Invalid login" });
   if (password !== teacher.password)
     return res.status(401).json({ msg: "Invalid login" });
+
+  // ✅ ADD THIS LINE
+  const school = await School.findOne({ schoolCode });
 
   const token = jwt.sign(
     { role: "teacher", schoolCode },
@@ -317,9 +317,12 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     { expiresIn: "7d" }
   );
 
-  res.json({ token });
+  // ✅ CHANGE THIS RESPONSE
+  res.json({
+    token,
+    schoolName: school?.schoolName || ""
+  });
 });
-
 
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
