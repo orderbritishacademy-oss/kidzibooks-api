@@ -226,7 +226,11 @@ app.post("/api/auth/school-login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({ token });
+    res.json({
+      token,
+      schoolName: school.schoolName
+    });
+
 
   } catch (e) {
     console.error(e);
