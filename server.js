@@ -36,7 +36,6 @@ const groq = new Groq({
 });
 
 /* ================= USER MODELS ================= */
-
 const TeacherSchema = new mongoose.Schema({
   schoolCode: String,
   teacherId: String,
@@ -47,6 +46,7 @@ const StudentSchema = new mongoose.Schema({
   schoolCode: String,
   studentId: String,
   class: String,
+  section: String,   // ✅ ADD THIS
   name: String,
   password: String,
 
@@ -262,13 +262,12 @@ app.post("/api/auth/register-teacher", async (req, res) => {
 
 /* ---- REGISTER STUDENT ---- */
 app.post("/api/auth/register-student", async (req, res) => {
-  let { schoolCode, studentId, class: stuClass, name, password } = req.body;
-
-  schoolCode = schoolCode?.trim();
-  studentId = studentId?.trim();
-  stuClass = stuClass?.trim();
-  name = name?.trim();
-  password = password?.trim();
+  let { schoolCode, studentId, class: stuClass, section, name, password } = req.body;
+    schoolCode = schoolCode?.trim();
+    studentId = studentId?.trim();
+    stuClass = stuClass?.trim();
+    name = name?.trim();
+    password = password?.trim();
 
   if (!schoolCode || !studentId || !stuClass || !name || !password)
     return res.status(400).json({ msg: "Invalid input" });
@@ -276,20 +275,26 @@ app.post("/api/auth/register-student", async (req, res) => {
   const school = await School.findOne({ schoolCode });
   if (!school) return res.status(400).json({ msg: "Invalid school code" });
 
-  const exists = await Student.findOne({ schoolCode, studentId });
+  const exists = await Student.findOne({
+    schoolCode,
+    studentId,
+    class: stuClass,
+    section
+  });
 
   if (exists) return res.status(400).json({ msg: "Student already exists" });
 
   // const hash = await bcrypt.hash(password, 10);
 
-  await Student.create({
+   await Student.create({
     schoolCode,
     studentId,
     class: stuClass,
+    section,     // ✅ ADD THIS
     name,
     password
-    // password: hash
   });
+
 
   res.json({ success: true });
 });
@@ -326,18 +331,20 @@ app.post("/api/auth/teacher-login", async (req, res) => {
 
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
-  let { schoolCode, studentId, class: stuClass, password } = req.body;
-
+ let { schoolCode, studentId, class: stuClass, section, password } = req.body;
   schoolCode = schoolCode?.trim();
   studentId = studentId?.trim();
   stuClass = stuClass?.trim();
+  section = section?.trim();
   password = password?.trim();
 
-  const student = await Student.findOne({ schoolCode, studentId, class: stuClass });
+  const student = await Student.findOne({
+    schoolCode,
+    studentId,
+    class: stuClass,
+    section
+  });
   if (!student) return res.status(401).json({ msg: "Invalid login" });
-
-//   const ok = await bcrypt.compare(password, student.password);
-// if (!ok) return res.status(401).json({ msg: "Invalid login" });
   if (password !== student.password)
     return res.status(401).json({ msg: "Invalid login" });
   
@@ -352,14 +359,15 @@ const token = jwt.sign(
   { expiresIn: "7d" }
 );
 
-res.json({
-  token,
-  name: student.name,          // ✅ SEND NAME
-  studentId: student.studentId,
-  class: student.class
-});
-
-
+const school = await School.findOne({ schoolCode });
+   res.json({
+    token,
+    name: student.name,
+    studentId: student.studentId,
+    class: student.class,
+    section: student.section,   // ✅ ADD
+    schoolName: school?.schoolName || ""
+  });
 });
 
 /* ---- STUDENT ONLINE PING (WHEN DASHBOARD OPENS) ---- */
