@@ -62,6 +62,22 @@ const StudentSchema = new mongoose.Schema({
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
 
+/* ================= NOTICE MODEL ================= */
+const NoticeSchema = new mongoose.Schema({
+  schoolCode: String,
+  title: String,
+  message: String,
+  date: String,
+  time: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const Notice = mongoose.model("Notice", NoticeSchema);
+
+
 /* ================= SUBJECT + CHAPTER MODEL ================= */
 const SubjectSchema = new mongoose.Schema({
   schoolCode: String,
@@ -499,6 +515,54 @@ app.post("/api/addSubjectChapter", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+/* ================= ADD NOTICE ================= */
+app.post("/api/addNotice", async (req, res) => {
+  try {
+    const { schoolCode, title, message, date, time } = req.body;
+
+    if (!schoolCode || !title || !message) {
+      return res.json({ success: false });
+    }
+
+    await Notice.create({
+      schoolCode,
+      title,
+      message,
+      date,
+      time
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("ADD NOTICE ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+/* ================= GET NOTICES ================= */
+app.get("/api/notices/:schoolCode", async (req, res) => {
+  try {
+    const notices = await Notice.find({
+      schoolCode: req.params.schoolCode
+    }).sort({ createdAt: -1 });
+
+    res.json(notices);
+  } catch (err) {
+    console.error("GET NOTICE ERROR:", err);
+    res.json([]);
+  }
+});
+/* ================= DELETE NOTICE ================= */
+app.delete("/api/deleteNotice/:id", async (req, res) => {
+  try {
+    await Notice.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE NOTICE ERROR:", err);
+    res.json({ success: false });
+  }
+});
+
 /* ================= GET SUBJECTS & CHAPTERS ================= */
 app.get("/api/subjects/:schoolCode/:className", async (req, res) => {
   try {
