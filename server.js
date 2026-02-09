@@ -65,6 +65,8 @@ const Student = mongoose.model("Student", StudentSchema);
 /* ================= NOTICE MODEL ================= */
 const NoticeSchema = new mongoose.Schema({
   schoolCode: String,
+  class: String,      // ✅ ADD
+  section: String,    // ✅ ADD
   title: String,
   message: String,
   date: String,
@@ -74,6 +76,7 @@ const NoticeSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
 
 const Notice = mongoose.model("Notice", NoticeSchema);
 
@@ -518,22 +521,20 @@ app.post("/api/addSubjectChapter", async (req, res) => {
 /* ================= ADD NOTICE ================= */
 app.post("/api/addNotice", async (req, res) => {
   try {
-    const { schoolCode, title, message, date, time } = req.body;
-
+    const { schoolCode,  class: noticeClass,  section: noticeSection, title, message, date, time } = req.body;
     if (!schoolCode || !title || !message) {
       return res.json({ success: false });
     }
-
-    await Notice.create({
+     await Notice.create({
       schoolCode,
+      class: noticeClass || "All",
+      section: noticeSection || "All",
       title,
       message,
       date,
       time
     });
-
     res.json({ success: true });
-
   } catch (err) {
     console.error("ADD NOTICE ERROR:", err);
     res.status(500).json({ success: false });
