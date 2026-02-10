@@ -1055,8 +1055,6 @@ const output = chat.choices[0]?.message?.content || "";
 // ======================================================================
 
 console.log("AI OUTPUT:", output.slice(0, 200));
-
-
     res.json({
       success: true,
       result: output
@@ -1093,27 +1091,24 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
     }));
 
      const newExam = {
-        id: Date.now(),
-        name: req.file.originalname,
-        url: fileUrl,
-        class: meta.class,
-        subject: meta.subject,
-        chapter: meta.chapter,
-      
-        questions: fixedQuestions,
-        answers: meta.answers || {},
-        pageImages: meta.pageImages || []
-      };
-
-
+      id: Date.now(),
+      name: req.file.originalname,
+      url: fileUrl,
+      class: meta.class,
+      subject: meta.subject,
+      chapter: meta.chapter,
+    
+      type: meta.type || "worksheet",   // ✅ ADD THIS LINE
+    
+      questions: fixedQuestions,
+      answers: meta.answers || {},
+      pageImages: meta.pageImages || []
+    };
+    
     allExams.push(newExam);
-
     fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
-
     console.log("✅ School exam added. Total:", allExams.length);
-
     res.json({ success: true, exam: newExam });
-
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
     res.status(500).json({ success: false });
