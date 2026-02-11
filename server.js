@@ -6,9 +6,6 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-/* ✅ for exam like bank quiz   pdf */
-const pdfParse = require("pdf-parse");
-/* ✅ poppler pdf */
 // const pdf = require("pdf-poppler");
 
 /* ✅ AUTH + DB */
@@ -24,15 +21,12 @@ app.use(express.json());
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
-
-/* ================= convertPDFToImages ===== show pdf images options============ */
 /* ================= OPENAI ================= */
 
 // const openai = new OpenAI({
 //   apiKey: process.env.OPENAI_API_KEY
 // });
 const Groq = require("groq-sdk");
-
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
@@ -60,7 +54,6 @@ const StudentSchema = new mongoose.Schema({
   lastActive: { type: Date }
 });
 
-
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
 
@@ -78,10 +71,7 @@ const NoticeSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
-
 const Notice = mongoose.model("Notice", NoticeSchema);
-
 
 /* ================= SUBJECT + CHAPTER MODEL ================= */
 const SubjectSchema = new mongoose.Schema({
@@ -108,7 +98,6 @@ const SchoolSchema = new mongoose.Schema({
 const School = mongoose.model("School", SchoolSchema);
 
 /* ================= EXAM DATA FILE ================= */
-
 const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
@@ -133,7 +122,6 @@ if (fs.existsSync(examDataFile)) {
   }
 }
 
-
 /* ===== LOAD OLYMPIAD EXAM ===== */
 if (fs.existsSync(olympiadDataFile)) {
   try {
@@ -146,7 +134,6 @@ if (fs.existsSync(olympiadDataFile)) {
 }
 
 /* ================= EXAM PDF STORAGE (SCHOOL PORTAL) ================= */
-
 const examUploadDir = path.join(__dirname, "exam_uploads");
 if (!fs.existsSync(examUploadDir)) fs.mkdirSync(examUploadDir, { recursive: true });
 
@@ -156,11 +143,9 @@ const examStorage = multer.diskStorage({
     cb(null, Date.now() + "_EXAM_" + file.originalname);
   }
 });
-
 const uploadExamPDF = multer({ storage: examStorage });
 
 /* ================= OLYMPIAD PDF STORAGE ================= */
-
 const olympiadUploadDir = path.join(__dirname, "olympiad_uploads");
 if (!fs.existsSync(olympiadUploadDir)) fs.mkdirSync(olympiadUploadDir, { recursive: true });
 
@@ -174,10 +159,10 @@ const olympiadStorage = multer.diskStorage({
 const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 
 /* ================= TEST ================= */
-
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
+
 /* ================= AUTH APIs ================= */
 /* ---- REGISTER SCHOOL ---- */
 app.post("/api/auth/register-school", async (req, res) => {
@@ -222,6 +207,7 @@ app.post("/api/auth/register-school", async (req, res) => {
     res.status(500).json({ msg: "School register failed" });
   }
 });
+
 /* ---- SCHOOL LOGIN ---- */
 app.post("/api/auth/school-login", async (req, res) => {
   try {
@@ -237,7 +223,6 @@ app.post("/api/auth/school-login", async (req, res) => {
     if (!school) return res.status(401).json({ msg: "Invalid school code" });
 
     // const ok = await bcrypt.compare(adminPassword, school.adminPassword);
-    // if (!ok) return res.status(401).json({ msg: "Wrong password" });
     if (adminPassword !== school.adminPassword)
       return res.status(401).json({ msg: "Wrong password" });
 
@@ -279,11 +264,9 @@ app.post("/api/auth/register-teacher", async (req, res) => {
 
   // const hash = await bcrypt.hash(password, 10);
 
-  // await Teacher.create({ schoolCode, teacherId, password: hash });
   await Teacher.create({ schoolCode, teacherId, password });
   res.json({ success: true });
 });
-
 
 /* ---- REGISTER STUDENT ---- */
 app.post("/api/auth/register-student", async (req, res) => {
@@ -417,7 +400,6 @@ app.post("/api/auth/student-online", async (req, res) => {
   }
 });
 
-
 /* ---- STUDENT LOGOUT ---- */
 app.post("/api/auth/student-logout", async (req, res) => {
   try {
@@ -520,6 +502,7 @@ app.post("/api/addSubjectChapter", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+
 /* ================= ADD NOTICE ================= */
 app.post("/api/addNotice", async (req, res) => {
   try {
@@ -542,6 +525,7 @@ app.post("/api/addNotice", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
+
 /* ================= GET NOTICES ================= */
 app.get("/api/notices/:schoolCode", async (req, res) => {
   try {
@@ -555,6 +539,7 @@ app.get("/api/notices/:schoolCode", async (req, res) => {
     res.json([]);
   }
 });
+
 /* ================= DELETE NOTICE ================= */
 app.delete("/api/deleteNotice/:id", async (req, res) => {
   try {
@@ -579,6 +564,7 @@ app.get("/api/subjects/:schoolCode/:className", async (req, res) => {
     res.status(500).json([]);
   }
 });
+
 /* ================= DELETE FULL SUBJECT ================= */
 app.delete("/api/deleteSubject/:schoolCode/:className/:subject", async (req, res) => {
   try {
@@ -600,6 +586,7 @@ app.delete("/api/deleteSubject/:schoolCode/:className/:subject", async (req, res
     res.status(500).json({ success: false });
   }
 });
+
 /* ================= DELETE ONLY CHAPTER ================= */
 app.delete("/api/deleteChapter", async (req, res) => {
   try {
@@ -624,7 +611,6 @@ app.delete("/api/deleteChapter", async (req, res) => {
     res.status(500).json({ success: false });
   }
 });
-
 
 /* ================= GET STUDENTS CLASS-WISE ================= */
 app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
@@ -742,59 +728,6 @@ STUDY NOTES – ${topic.toUpperCase()}
 Then give topic-wise explanation.
 `;
     }
-//     else if (type === "ALL") {
-
-//       prompt = `
-// Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
-
-// Class: ${studentClass}
-// Subject: ${subject}
-// Topic: ${topic}
-// Difficulty Level: ${difficulty}
-
-// IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
-// - Use ONLY plain text
-// - Do NOT use #, ##, ###, *, **, ---, ___, bullets
-// - Show topic name at the top in UPPERCASE
-// - Use clear SECTION headings (plain text)
-// - Proper question numbering (1, 2, 3)
-// - Student-friendly language
-// - Do NOT mix answers with questions
-// - Add a separate ANSWER KEY at the end
-// - For Match the Following, show two clear columns
-// - All questions must be strictly from given SUBJECT and TOPIC
-
-// Start the paper EXACTLY like this:
-
-// QUESTION PAPER – ${topic.toUpperCase()}
-
-// Then generate around ${count} total questions in following sections:
-
-// SECTION A: MCQs
-// SECTION B: True / False
-// SECTION C: Fill in the Blanks
-// SECTION D: Match the Following
-// SECTION E: Descriptive Questions
-
-// DESCRIPTIVE QUESTIONS RULES:
-// - Use Explain, Describe, Why, Write a short note
-// - Mix short and long answer questions
-
-// MATCH THE FOLLOWING FORMAT (PLAIN TEXT):
-
-// Match the items in Column A with Column B.
-
-// Column A                     Column B
-// a) Item from Column A        1) Item from Column B
-// b) Item from Column A        2) Item from Column B
-// c) Item from Column A        3) Item from Column B
-// d) Item from Column A        4) Item from Column B
-
-// After all questions write:
-
-// ANSWER KEY
-// and give answers section-wise.
-// `;
  // =================start conversartion code =====================//
       else if (type === "CONVERSATION" || type === "CHAT") {
   prompt = `
@@ -1031,16 +964,7 @@ and then answers.
 `;
     }
 
-//     const response = await openai.responses.create({
-//   model: "gpt-4o-mini",   // more compatible
-//   input: prompt,
-//   temperature: 0.5
-// });
-
-// const output =
-//   response.output_text ||
-//   response.output?.[0]?.content?.[0]?.text ||
-//   "";
+    
 const chat = await groq.chat.completions.create({
  model: "llama-3.1-8b-instant", // ⭐ BEST FREE MODEL
   messages: [
@@ -1054,8 +978,6 @@ const chat = await groq.chat.completions.create({
 
 const output = chat.choices[0]?.message?.content || "";
 
-// ======================================================================
-
 console.log("AI OUTPUT:", output.slice(0, 200));
     res.json({
       success: true,
@@ -1068,71 +990,7 @@ console.log("AI OUTPUT:", output.slice(0, 200));
   }
 });
 
-/* ================= IMPORT QUESTION PDF (QUIZ BUILDER bank Quiz) ================= */
-
-const uploadImportPDF = multer({ dest: "imports/" });
-
-app.post("/api/importQuestions", uploadImportPDF.single("pdf"), async (req, res) => {
-  try {
-    const filePath = req.file.path;
-
-    const dataBuffer = fs.readFileSync(filePath);
-    const pdfData = await pdfParse(dataBuffer);
-
-    const text = pdfData.text;
-
-    // SIMPLE QUESTION PARSER
-    const lines = text.split("\n").filter(l => l.trim());
-
-    const questions = [];
-    let currentQuestion = null;
-
-    lines.forEach(line => {
-      line = line.trim();
-
-      // Question line
-      if (line.match(/^\d+\./) || line.includes("?")) {
-        if (currentQuestion) questions.push(currentQuestion);
-
-        currentQuestion = {
-          title: line,
-          type: "short",
-          options: [],
-          correctAnswer: null,
-          marks: 1,
-          required: true
-        };
-      }
-
-      // Option line (A. B. C. D.)
-      else if (line.match(/^[A-D]\./)) {
-        if (currentQuestion) {
-          currentQuestion.type = "multiple";
-          currentQuestion.options.push({
-            text: line.replace(/^[A-D]\./, "").trim()
-          });
-        }
-      }
-    });
-
-    if (currentQuestion) questions.push(currentQuestion);
-
-    fs.unlinkSync(filePath);
-
-    res.json({
-      success: true,
-      questions
-    });
-
-  } catch (err) {
-    console.error("IMPORT PDF ERROR:", err);
-    res.status(500).json({ success: false });
-  }
-});
-
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
-
-// app.post("/api/uploadExam", uploadExamPDF.single("pdf"), (req, res) => {
 app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
   try {
 
@@ -1179,10 +1037,7 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
   }
 });
 
-
-
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
-
 app.get("/api/allExams", (req, res) => {
   res.json(allExams);
 });
@@ -1210,7 +1065,6 @@ app.delete("/api/deleteExam/:id", (req, res) => {
 
 
 /* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
-
 app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) => {
   try {
     const fileUrl = `/olympiad_uploads/${req.file.filename}`;
@@ -1238,17 +1092,14 @@ app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) =
 });
 
 /* ================= ✅ STUDENT GET OLYMPIAD EXAM ================= */
-
 app.get("/api/currentOlympiadExam", (req, res) => {
   res.json(currentOlympiadExam);
 });
 
 /* ================= STATIC FILE SERVING ================= */
-
 app.use("/exam_uploads", express.static(examUploadDir));
 app.use("/olympiad_uploads", express.static(olympiadUploadDir));
 
 /* ================= SERVER ================= */
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on", PORT));
