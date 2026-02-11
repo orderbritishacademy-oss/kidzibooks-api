@@ -6,6 +6,8 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+/* ✅ for exam like bank quiz   pdf */
+const pdfParse = require("pdf-parse");
 /* ✅ poppler pdf */
 // const pdf = require("pdf-poppler");
 
@@ -1063,6 +1065,68 @@ console.log("AI OUTPUT:", output.slice(0, 200));
   } catch (err) {
     console.error("OPENAI ERROR:", err);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/* ================= IMPORT QUESTION PDF (QUIZ BUILDER bank Quiz) ================= */
+
+const uploadImportPDF = multer({ dest: "imports/" });
+
+app.post("/api/importQuestions", uploadImportPDF.single("pdf"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
+
+    const dataBuffer = fs.readFileSync(filePath);
+    const pdfData = await pdfParse(dataBuffer);
+
+    const text = pdfData.text;
+
+    // SIMPLE QUESTION PARSER
+    const lines = text.split("\n").filter(l => l.trim());
+
+    const questions = [];
+    let currentQuestion = null;
+
+    lines.forEach(line => {
+      line = line.trim();
+
+      // Question line
+      if (line.match(/^\d+\./) || line.includes("?")) {
+        if (currentQuestion) questions.push(currentQuestion);
+
+        currentQuestion = {
+          title: line,
+          type: "short",
+          options: [],
+          correctAnswer: null,
+          marks: 1,
+          required: true
+        };
+      }
+
+      // Option line (A. B. C. D.)
+      else if (line.match(/^[A-D]\./)) {
+        if (currentQuestion) {
+          currentQuestion.type = "multiple";
+          currentQuestion.options.push({
+            text: line.replace(/^[A-D]\./, "").trim()
+          });
+        }
+      }
+    });
+
+    if (currentQuestion) questions.push(currentQuestion);
+
+    fs.unlinkSync(filePath);
+
+    res.json({
+      success: true,
+      questions
+    });
+
+  } catch (err) {
+    console.error("IMPORT PDF ERROR:", err);
+    res.status(500).json({ success: false });
   }
 });
 
