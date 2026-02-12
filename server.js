@@ -70,6 +70,7 @@ const ExamSubmissionSchema = new mongoose.Schema({
   subject: String,
   chapter: String,
 
+  questions: Array,   // ✅ ADD THIS
   answers: Object,
 
   submittedAt: {
@@ -77,7 +78,6 @@ const ExamSubmissionSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
 const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
 
 /* ================= NOTICE MODEL ================= */
@@ -1122,20 +1122,20 @@ app.get("/api/currentOlympiadExam", (req, res) => {
 /* ================= STUDENT SUBMIT EXAM ================= */
 app.post("/api/submitExam", async (req, res) => {
   try {
-
-    const submission = req.body;
+    const submission = {
+      ...req.body,
+      questions: req.body.questions || []   // ✅ ADD THIS
+    };
 
     await ExamSubmission.create(submission);
-
     console.log("✅ Exam submitted");
-
     res.json({ success: true });
-
   } catch (err) {
     console.error("SUBMIT EXAM ERROR:", err);
     res.status(500).json({ success: false });
   }
 });
+
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
 app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
   try {
@@ -1149,6 +1149,19 @@ app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
   } catch (err) {
     console.error("GET SUBMISSIONS ERROR:", err);
     res.json([]);
+  }
+});
+/* ================= DELETE SUBMISSION ================= */
+app.delete("/api/deleteSubmission/:id", async (req, res) => {
+  try {
+
+    await ExamSubmission.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("DELETE SUBMISSION ERROR:", err);
+    res.json({ success: false });
   }
 });
 
