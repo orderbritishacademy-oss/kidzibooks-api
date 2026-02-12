@@ -57,6 +57,29 @@ const StudentSchema = new mongoose.Schema({
 const Teacher = mongoose.model("Teacher", TeacherSchema);
 const Student = mongoose.model("Student", StudentSchema);
 
+/* ================= EXAM SUBMISSION MODEL ================= */
+const ExamSubmissionSchema = new mongoose.Schema({
+  schoolCode: String,
+  studentId: String,
+  studentName: String,
+  class: String,
+  section: String,
+
+  examId: String,
+  examName: String,
+  subject: String,
+  chapter: String,
+
+  answers: Object,
+
+  submittedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
+
 /* ================= NOTICE MODEL ================= */
 const NoticeSchema = new mongoose.Schema({
   schoolCode: String,
@@ -1094,6 +1117,39 @@ app.post("/api/uploadOlympiadPDF", uploadOlympiadPDF.single("pdf"), (req, res) =
 /* ================= ✅ STUDENT GET OLYMPIAD EXAM ================= */
 app.get("/api/currentOlympiadExam", (req, res) => {
   res.json(currentOlympiadExam);
+});
+
+/* ================= STUDENT SUBMIT EXAM ================= */
+app.post("/api/submitExam", async (req, res) => {
+  try {
+
+    const submission = req.body;
+
+    await ExamSubmission.create(submission);
+
+    console.log("✅ Exam submitted");
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("SUBMIT EXAM ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+/* ================= TEACHER GET SUBMITTED EXAMS ================= */
+app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
+  try {
+
+    const submissions = await ExamSubmission
+      .find({ schoolCode: req.params.schoolCode })
+      .sort({ submittedAt: -1 });
+
+    res.json(submissions);
+
+  } catch (err) {
+    console.error("GET SUBMISSIONS ERROR:", err);
+    res.json([]);
+  }
 });
 
 /* ================= STATIC FILE SERVING ================= */
