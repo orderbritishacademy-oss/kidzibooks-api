@@ -168,6 +168,29 @@ if (fs.existsSync(olympiadDataFile)) {
     console.log("❌ Failed to load olympiad exam");
   }
 }
+/* ================= QUESTION IMAGE UPLOAD ================= */
+const imageUploadDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(imageUploadDir)) {
+  fs.mkdirSync(imageUploadDir, { recursive: true });
+}
+
+const imageStorage = multer.diskStorage({
+  destination: imageUploadDir,
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "_IMG_" + file.originalname);
+  }
+});
+
+const uploadImage = multer({ storage: imageStorage });
+
+/* ===== IMAGE UPLOAD API ===== */
+app.post("/api/uploadImage", uploadImage.single("image"), (req, res) => {
+  res.json({
+    success: true,
+    url: `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+  });
+});
 
 /* ================= EXAM PDF STORAGE (SCHOOL PORTAL) ================= */
 const examUploadDir = path.join(__dirname, "exam_uploads");
@@ -1221,6 +1244,8 @@ app.delete("/api/deleteSubmission/:id", async (req, res) => {
 });
 
 /* ================= STATIC FILE SERVING ================= */
+app.use("/uploads", express.static(imageUploadDir));
+
 app.use("/exam_uploads", express.static(examUploadDir));
 app.use("/olympiad_uploads", express.static(olympiadUploadDir));
 
