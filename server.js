@@ -80,6 +80,19 @@ const ExamSubmissionSchema = new mongoose.Schema({
 });
 const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
 
+/* ================= QUIZ MODEL (LINK BASED EXAM) ================= */
+const QuizSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  questions: Array,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const Quiz = mongoose.model("Quiz", QuizSchema);
+
 /* ================= NOTICE MODEL ================= */
 const NoticeSchema = new mongoose.Schema({
   schoolCode: String,
@@ -184,6 +197,32 @@ const uploadOlympiadPDF = multer({ storage: olympiadStorage });
 /* ================= TEST ================= */
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
+});
+
+/* ================= CREATE QUIZ (LINK EXAM) ================= */
+app.post("/api/createQuiz", async (req, res) => {
+  try {
+
+    const { name, description, questions } = req.body;
+
+    if (!name || !questions)
+      return res.json({ success: false });
+
+    const quiz = await Quiz.create({
+      name,
+      description,
+      questions
+    });
+
+    res.json({
+      success: true,
+      examId: quiz._id
+    });
+
+  } catch (err) {
+    console.error("CREATE QUIZ ERROR:", err);
+    res.status(500).json({ success: false });
+  }
 });
 
 /* ================= AUTH APIs ================= */
@@ -1063,6 +1102,22 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 app.get("/api/allExams", (req, res) => {
   res.json(allExams);
+});
+/* ================= GET QUIZ BY ID ================= */
+app.get("/api/exam/:id", async (req, res) => {
+  try {
+
+    const quiz = await Quiz.findById(req.params.id);
+
+    if (!quiz)
+      return res.status(404).json({ success: false });
+
+    res.json(quiz);
+
+  } catch (err) {
+    console.error("GET QUIZ ERROR:", err);
+    res.status(500).json({ success: false });
+  }
 });
 
 /* ================= ✅ STUDENT GET delete EXAM pdf================= */
