@@ -1129,14 +1129,15 @@ app.get("/api/allExams", (req, res) => {
 /* ================= GET QUIZ BY ID ================= */
 app.get("/api/exam/:id", async (req, res) => {
   try {
-
     const quiz = await Quiz.findById(req.params.id);
-
     if (!quiz)
       return res.status(404).json({ success: false });
 
-    res.json(quiz);
-
+    // res.json(quiz);
+    res.json({
+      success: true,
+      data: quiz
+    });
   } catch (err) {
     console.error("GET QUIZ ERROR:", err);
     res.status(500).json({ success: false });
