@@ -1097,13 +1097,16 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
       questionImage: q.questionImage || q.image || null,
     
       options: (q.options || []).map(opt => {
-        if (!opt) return "";
-    
-        // keep text as it is
-        if (typeof opt === "string") return opt;
-    
-        return "";
-      })
+          if (!opt) return "";
+        
+          if (typeof opt === "string") {
+            return { text: opt, image: null };
+          }
+          return {
+            text: opt.text || "",
+            image: opt.image || null
+          };
+        })
     }));
 
      const newExam = {
