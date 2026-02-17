@@ -64,20 +64,28 @@ const ExamSubmissionSchema = new mongoose.Schema({
   studentName: String,
   class: String,
   section: String,
-
   examId: String,
   examName: String,
   subject: String,
   chapter: String,
 
-  questions: Array,   // ✅ ADD THIS
+  questions: Array,
   answers: Object,
+
+  result: {               // ✅ ADD THIS BLOCK
+    obtainedMarks: Number,
+    totalMarks: Number,
+    percentage: Number,
+    level: String,
+    rank: String
+  },
 
   submittedAt: {
     type: Date,
     default: Date.now
   }
 });
+
 const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
 
 /* ================= QUIZ MODEL (LINK BASED EXAM) ================= */
