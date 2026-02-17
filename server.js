@@ -1085,7 +1085,8 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
     // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
     const fixedQuestions = (meta.questions || []).map(q => ({
       question: q.question || "",
-      image: q.image || null,
+      // image: q.image || null,
+      questionImage: q.questionImage || q.image || null,
     
       options: (q.options || []).map(opt => {
         if (!opt) return "";
