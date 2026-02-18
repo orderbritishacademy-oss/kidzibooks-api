@@ -101,6 +101,18 @@ const QuizSchema = new mongoose.Schema({
 
 const Quiz = mongoose.model("Quiz", QuizSchema);
 
+/* ================= LINK EXAM STUDENT MODEL ================= */
+const LinkStudentSchema = new mongoose.Schema({
+  name: String,
+  schoolName: String,
+  phone: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+const LinkStudent = mongoose.model("LinkStudent", LinkStudentSchema);
+
 /* ================= NOTICE MODEL ================= */
 const NoticeSchema = new mongoose.Schema({
   schoolCode: String,
@@ -256,12 +268,51 @@ app.post("/api/createQuiz", async (req, res) => {
   }
 });
 
-/* ================= AUTH APIs ================= */
+/* ================= LINK EXAM STUDENT LOGIN ================= */
+app.post("/api/link-student/login", async (req, res) => {
+  try {
+    const { name, schoolName, phone } = req.body;
+    if (!phone)
+      return res.json({ success: false });
+    // ✅ check existing student
+    let student = await LinkStudent.findOne({ phone });
+    // ✅ create if not exists
+    if (!student) {
+      student = await LinkStudent.create({
+        name,
+        schoolName,
+        phone
+      });
+    }
+    res.json({
+      success: true,
+      student
+    });
+  } catch (err) {
+    console.error("LINK STUDENT LOGIN ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+/* ================= FETCH LINK STUDENT BY PHONE ================= */
+app.get("/api/link-student/:phone", async (req, res) => {
+  try {
+    const student = await LinkStudent.findOne({
+      phone: req.params.phone
+    });
+    res.json({
+      success: true,
+      student
+    });
+  } catch (err) {
+    res.json({ success: false });
+  }
+});
+
+/* ================= REGISTER SCHOOL ================= */
 /* ---- REGISTER SCHOOL ---- */
 app.post("/api/auth/register-school", async (req, res) => {
   try {
     let { schoolName, schoolAddress, schoolId, phone, state, country, schoolCode, adminPassword } = req.body;
-
     schoolName = schoolName?.trim();
     schoolAddress = schoolAddress?.trim();
     schoolId = schoolId?.trim();
@@ -273,15 +324,13 @@ app.post("/api/auth/register-school", async (req, res) => {
     
     if (!schoolName || !schoolId || !phone || !state || !country || !schoolCode || !adminPassword)
   return res.status(400).json({ msg: "All fields required" });
-
+    
     const exists = await School.findOne({ schoolCode });
     if (exists) return res.status(400).json({ msg: "School already exists" });
     // ✅ check duplicate school ID
     const idExists = await School.findOne({ schoolId });
     if (idExists) return res.status(400).json({ msg: "School ID already exists" });
-
     // const hash = await bcrypt.hash(adminPassword, 10);
-
     await School.create({
       schoolName,
       schoolAddress,
@@ -292,9 +341,7 @@ app.post("/api/auth/register-school", async (req, res) => {
       schoolCode,
       adminPassword
     });
-
     res.json({ success: true });
-
   } catch (e) {
     console.error(e);
     res.status(500).json({ msg: "School register failed" });
