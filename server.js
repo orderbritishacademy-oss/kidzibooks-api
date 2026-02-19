@@ -106,6 +106,7 @@ const LinkStudentSchema = new mongoose.Schema({
   name: String,
   schoolName: String,
   phone: String,
+  studentClass: String,   // ✅ ADD THIS
   createdAt: {
     type: Date,
     default: Date.now
@@ -271,7 +272,7 @@ app.post("/api/createQuiz", async (req, res) => {
 /* ================= LINK EXAM STUDENT LOGIN ================= */
 app.post("/api/link-student/login", async (req, res) => {
   try {
-    const { name, schoolName, phone } = req.body;
+    const { name, schoolName, phone, studentClass } = req.body;
     if (!phone)
       return res.json({ success: false });
     // ✅ check existing student
@@ -281,7 +282,8 @@ app.post("/api/link-student/login", async (req, res) => {
       student = await LinkStudent.create({
         name,
         schoolName,
-        phone
+        phone,
+        studentClass   // ✅ SAVE CLASS
       });
     }
     res.json({
