@@ -1406,27 +1406,28 @@ io.on("connection", (socket) => {
       });
     }
   });
-  /* ===== Teacher approves student ===== */
-  socket.on("approve-student", ({ socketId, roomCode }) => {
-    const studentSocket = io.sockets.sockets.get(socketId);
-    if (studentSocket) {
-      // Join student to room
-      studentSocket.join(roomCode);
-      // ✅ ADD STUDENT TO ACTIVE LIST
-      if (!activeStudents[roomCode]) {
-        activeStudents[roomCode] = [];
+    /* ===== Teacher approves student ===== */
+    socket.on("approve-student", ({ socketId, roomCode }) => {
+      const studentSocket = io.sockets.sockets.get(socketId);
+      if (studentSocket) {
+    
+        studentSocket.join(roomCode);
+        studentSocket.emit("approved");
+        // 🔥 ADD STUDENT TO ACTIVE LIST
+        if (!activeStudents[roomCode]) {
+          activeStudents[roomCode] = [];
+        }
+       activeStudents[roomCode].push({
+          socketId,
+          studentName: studentSocket.studentName || "Student"
+        });
+        // 🔥 SEND UPDATED LIST TO TEACHER
+        io.to(roomCode).emit(
+          "update-student-list",
+          activeStudents[roomCode]
+        );
+        socket.emit("student-joined", socketId);
       }
-      activeStudents[roomCode].push({
-        socketId,
-        studentName: studentSocket.studentName
-      });
-
-      // ✅ SEND UPDATED LIST TO TEACHER
-      socket.emit("update-student-list", activeStudents[roomCode]);
-
-      studentSocket.emit("approved");
-      socket.emit("student-joined", socketId);
-    }
   });
 
   /* ===== Teacher rejects student ===== */
