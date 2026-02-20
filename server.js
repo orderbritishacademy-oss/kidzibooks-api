@@ -336,10 +336,10 @@ app.post("/api/auth/register-school", async (req, res) => {
     country = country?.trim();
     schoolCode = schoolCode?.trim();
     adminPassword = adminPassword?.trim();
-    
+
     if (!schoolName || !schoolId || !phone || !state || !country || !schoolCode || !adminPassword)
-  return res.status(400).json({ msg: "All fields required" });
-    
+      return res.status(400).json({ msg: "All fields required" });
+
     const exists = await School.findOne({ schoolCode });
     if (exists) return res.status(400).json({ msg: "School already exists" });
     // ✅ check duplicate school ID
@@ -426,11 +426,11 @@ app.post("/api/auth/register-teacher", async (req, res) => {
 /* ---- REGISTER STUDENT ---- */
 app.post("/api/auth/register-student", async (req, res) => {
   let { schoolCode, studentId, class: stuClass, section, name, password } = req.body;
-    schoolCode = schoolCode?.trim();
-    studentId = studentId?.trim();
-    stuClass = stuClass?.trim();
-    name = name?.trim();
-    password = password?.trim();
+  schoolCode = schoolCode?.trim();
+  studentId = studentId?.trim();
+  stuClass = stuClass?.trim();
+  name = name?.trim();
+  password = password?.trim();
 
   if (!schoolCode || !studentId || !stuClass || !name || !password)
     return res.status(400).json({ msg: "Invalid input" });
@@ -449,7 +449,7 @@ app.post("/api/auth/register-student", async (req, res) => {
 
   // const hash = await bcrypt.hash(password, 10);
 
-   await Student.create({
+  await Student.create({
     schoolCode,
     studentId,
     class: stuClass,
@@ -494,7 +494,7 @@ app.post("/api/auth/teacher-login", async (req, res) => {
 
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
- let { schoolCode, studentId, class: stuClass, section, password } = req.body;
+  let { schoolCode, studentId, class: stuClass, section, password } = req.body;
   schoolCode = schoolCode?.trim();
   studentId = studentId?.trim();
   stuClass = stuClass?.trim();
@@ -510,20 +510,20 @@ app.post("/api/auth/student-login", async (req, res) => {
   if (!student) return res.status(401).json({ msg: "Invalid login" });
   if (password !== student.password)
     return res.status(401).json({ msg: "Invalid login" });
-  
-await Student.updateOne(
-  { schoolCode, studentId },
-  { $set: { isOnline: true } }
-);
 
-const token = jwt.sign(
-  { role: "student", schoolCode, class: stuClass },
-  process.env.JWT_SECRET,
-  { expiresIn: "7d" }
-);
+  await Student.updateOne(
+    { schoolCode, studentId },
+    { $set: { isOnline: true } }
+  );
 
-const school = await School.findOne({ schoolCode });
-   res.json({
+  const token = jwt.sign(
+    { role: "student", schoolCode, class: stuClass },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  const school = await School.findOne({ schoolCode });
+  res.json({
     token,
     name: student.name,
     studentId: student.studentId,
@@ -540,11 +540,11 @@ app.post("/api/auth/student-online", async (req, res) => {
 
     await Student.updateOne(
       { schoolCode, studentId },
-      { 
-        $set: { 
-          isOnline: true, 
-          lastActive: new Date() 
-        } 
+      {
+        $set: {
+          isOnline: true,
+          lastActive: new Date()
+        }
       }
     );
 
@@ -562,11 +562,11 @@ app.post("/api/auth/student-logout", async (req, res) => {
 
     await Student.updateOne(
       { schoolCode, studentId },
-      { 
-        $set: { 
+      {
+        $set: {
           isOnline: false,
           lastActive: new Date()
-        } 
+        }
       }
     );
 
@@ -615,7 +615,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
       const r = await Student.updateOne(
         { schoolCode, studentId },
-        { $set: { password: newPassword }}
+        { $set: { password: newPassword } }
       );
       if (!r.matchedCount) return res.status(404).json({ msg: "Student not found" });
     }
@@ -661,11 +661,11 @@ app.post("/api/addSubjectChapter", async (req, res) => {
 /* ================= ADD NOTICE ================= */
 app.post("/api/addNotice", async (req, res) => {
   try {
-    const { schoolCode,  class: noticeClass,  section: noticeSection, title, message, date, time } = req.body;
+    const { schoolCode, class: noticeClass, section: noticeSection, title, message, date, time } = req.body;
     if (!schoolCode || !title || !message) {
       return res.json({ success: false });
     }
-     await Notice.create({
+    await Notice.create({
       schoolCode,
       class: noticeClass || "All",
       section: noticeSection || "All",
@@ -883,9 +883,9 @@ STUDY NOTES – ${topic.toUpperCase()}
 Then give topic-wise explanation.
 `;
     }
- // =================start conversartion code =====================//
-      else if (type === "CONVERSATION" || type === "CHAT") {
-  prompt = `
+    // =================start conversartion code =====================//
+    else if (type === "CONVERSATION" || type === "CHAT") {
+      prompt = `
 You are a friendly AI English speaking assistant like ChatGPT.
 
 This is a LIVE conversation to help the student practice spoken English.
@@ -908,12 +908,12 @@ Student just said:
 Reply in simple English.
 Then ask ONE friendly follow-up question.
 `;
-}
-  // =================start CODING else if blok code =====================//
-     else if (type === "CODING") {
-  const { language } = req.body;
+    }
+    // =================start CODING else if blok code =====================//
+    else if (type === "CODING") {
+      const { language } = req.body;
 
-  prompt = `
+      prompt = `
 You are a VERY STRICT coding teacher for school students.
 
 STUDENT DETAILS:
@@ -1017,11 +1017,11 @@ int main() {
   return 0;
 }
 `;
-}
-// =================end conversartion else if blok code =====================//
+    }
+    // =================end conversartion else if blok code =====================//
     else if (type === "ALL") {
 
-  prompt = `
+      prompt = `
 Create a SCHOOL EXAM question paper strictly as per CBSE pattern.
 
 Class: ${studentClass}
@@ -1119,21 +1119,21 @@ and then answers.
 `;
     }
 
-    
-const chat = await groq.chat.completions.create({
- model: "llama-3.1-8b-instant", // ⭐ BEST FREE MODEL
-  messages: [
-    {
-      role: "user",
-      content: prompt
-    }
-  ],
-  temperature: 0.5
-});
 
-const output = chat.choices[0]?.message?.content || "";
+    const chat = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant", // ⭐ BEST FREE MODEL
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.5
+    });
 
-console.log("AI OUTPUT:", output.slice(0, 200));
+    const output = chat.choices[0]?.message?.content || "";
+
+    console.log("AI OUTPUT:", output.slice(0, 200));
     res.json({
       success: true,
       result: output
@@ -1151,41 +1151,41 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
 
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
-    
+
     // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
     const fixedQuestions = (meta.questions || []).map(q => ({
       question: q.question || "",
       // image: q.image || null,
       questionImage: q.questionImage || q.image || null,
-    
+
       options: (q.options || []).map(opt => {
-          if (!opt) return "";
-        
-          if (typeof opt === "string") {
-            return { text: opt, image: null };
-          }
-          return {
-            text: opt.text || "",
-            image: opt.image || null
-          };
-        })
+        if (!opt) return "";
+
+        if (typeof opt === "string") {
+          return { text: opt, image: null };
+        }
+        return {
+          text: opt.text || "",
+          image: opt.image || null
+        };
+      })
     }));
 
-     const newExam = {
+    const newExam = {
       id: Date.now(),
       name: req.file.originalname,
       url: fileUrl,
       class: meta.class,
       subject: meta.subject,
       chapter: meta.chapter,
-    
+
       type: meta.type || "worksheet",   // ✅ ADD THIS LINE
-    
+
       questions: fixedQuestions,
       answers: meta.answers || {},
       pageImages: meta.pageImages || []
     };
-    
+
     allExams.push(newExam);
     fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
     console.log("✅ School exam added. Total:", allExams.length);
@@ -1383,9 +1383,9 @@ const io = new Server(server, {
 
 /* 🔥 SOCKET EVENTS */
 io.on("connection", (socket) => {
-  
+
   console.log("User connected:", socket.id);
-  
+
   /* ===== Teacher creates class ===== */
   socket.on("create-class", (roomCode) => {
     socket.join(roomCode);
@@ -1393,7 +1393,7 @@ io.on("connection", (socket) => {
   });
 
   /* ===== Student joins class ===== */
- /* ===== Student sends join request ===== */
+  /* ===== Student sends join request ===== */
   socket.on("join-request", ({ roomCode, studentName }) => {
     const room = io.sockets.adapter.rooms.get(roomCode);
     if (room) {
@@ -1405,7 +1405,7 @@ io.on("connection", (socket) => {
     }
   });
   /* ===== Teacher approves student ===== */
-    socket.on("approve-student", ({ socketId, roomCode }) => {
+  socket.on("approve-student", ({ socketId, roomCode }) => {
     const studentSocket = io.sockets.sockets.get(socketId);
     if (studentSocket) {
       // Join student to room
@@ -1416,7 +1416,7 @@ io.on("connection", (socket) => {
       socket.emit("student-joined", socketId);
     }
   });
-  
+
   /* ===== Teacher rejects student ===== */
   socket.on("reject-student", (student) => {
     const { socketId } = student;
@@ -1425,7 +1425,7 @@ io.on("connection", (socket) => {
       studentSocket.emit("rejected");
     }
   });
-  
+
   /* ===== WebRTC Offer ===== */
   socket.on("offer", (data) => {
     socket.to(data.to).emit("offer", {
@@ -1442,13 +1442,14 @@ io.on("connection", (socket) => {
     });
   });;
 
-  /* ===== ICE Candidate ===== */
-   socket.on("ice-candidate", (data) => {
+  socket.on("ice-candidate", (data) => {
     socket.to(data.to).emit("ice-candidate", {
       candidate: data.candidate,
       from: socket.id
     });
   });
+
+});   // ✅ THIS WAS MISSING (close io.on)
 
 /* 🔥 Start Server */
 server.listen(PORT, () => {
