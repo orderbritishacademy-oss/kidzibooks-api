@@ -1394,27 +1394,25 @@ io.on("connection", (socket) => {
 
   /* ===== Student joins class ===== */
  /* ===== Student sends join request ===== */
-  socket.on("join-request", (data) => {
-      const { roomCode, studentName } = data;
-      // send request to teacher
+  socket.on("join-request", ({ roomCode, studentName }) => {
+    const room = io.sockets.adapter.rooms.get(roomCode);
+    if (room) {
       socket.to(roomCode).emit("new-join-request", {
         socketId: socket.id,
         studentName,
         roomCode
       });
-    });
-/* ===== Teacher approves student ===== */
-  socket.on("approve-student", (student) => {
-    const { socketId, roomCode } = student;
-    // join student to room
+    }
+  });
+  /* ===== Teacher approves student ===== */
+    socket.on("approve-student", ({ socketId, roomCode }) => {
     const studentSocket = io.sockets.sockets.get(socketId);
     if (studentSocket) {
+      // Join student to room
       studentSocket.join(roomCode);
-      // notify teacher
-      socket.emit("student-approved", socketId);
-      // notify student
+      // Notify student
       studentSocket.emit("approved");
-      // start WebRTC
+      // Notify teacher to start WebRTC
       socket.emit("student-joined", socketId);
     }
   });
@@ -1438,14 +1436,19 @@ io.on("connection", (socket) => {
 
   /* ===== WebRTC Answer ===== */
   socket.on("answer", (data) => {
-    socket.to(data.to).emit("answer", data.answer);
-  });
+    socket.to(data.to).emit("answer", {
+      answer: data.answer,
+      from: socket.id
+    });
+  });;
 
   /* ===== ICE Candidate ===== */
-  socket.on("ice-candidate", (data) => {
-    socket.to(data.to).emit("ice-candidate", data.candidate);
+   socket.on("ice-candidate", (data) => {
+    socket.to(data.to).emit("ice-candidate", {
+      candidate: data.candidate,
+      from: socket.id
+    });
   });
-});
 
 /* 🔥 Start Server */
 server.listen(PORT, () => {
