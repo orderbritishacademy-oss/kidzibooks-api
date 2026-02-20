@@ -1380,7 +1380,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
-
+// ✅ ADD THIS
+const activeStudents = {};
 /* 🔥 SOCKET EVENTS */
 io.on("connection", (socket) => {
 
@@ -1394,7 +1395,8 @@ io.on("connection", (socket) => {
 
   /* ===== Student joins class ===== */
   /* ===== Student sends join request ===== */
-  socket.on("join-request", ({ roomCode, studentName }) => {
+  socket.on("join-request", ({ roomCode, studentName }) => {  
+    socket.studentName = studentName; // ✅ ADD THIS
     const room = io.sockets.adapter.rooms.get(roomCode);
     if (room) {
       socket.to(roomCode).emit("new-join-request", {
@@ -1410,9 +1412,19 @@ io.on("connection", (socket) => {
     if (studentSocket) {
       // Join student to room
       studentSocket.join(roomCode);
-      // Notify student
+      // ✅ ADD STUDENT TO ACTIVE LIST
+      if (!activeStudents[roomCode]) {
+        activeStudents[roomCode] = [];
+      }
+      activeStudents[roomCode].push({
+        socketId,
+        studentName: studentSocket.studentName
+      });
+      
+      // ✅ SEND UPDATED LIST TO TEACHER
+      socket.emit("update-student-list", activeStudents[roomCode]);
+      
       studentSocket.emit("approved");
-      // Notify teacher to start WebRTC
       socket.emit("student-joined", socketId);
     }
   });
@@ -1448,7 +1460,17 @@ io.on("connection", (socket) => {
       from: socket.id
     });
   });
-
+  // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
+  socket.on("disconnect", () => {
+  
+    for (const room in activeStudents) {
+      activeStudents[room] = activeStudents[room].filter(
+        s => s.socketId !== socket.id
+      );
+      io.to(room).emit("update-student-list", activeStudents[room]);
+    }
+  });
+  
 });   // ✅ THIS WAS MISSING (close io.on)
 
 /* 🔥 Start Server */
