@@ -1395,7 +1395,7 @@ io.on("connection", (socket) => {
 
   /* ===== Student joins class ===== */
   /* ===== Student sends join request ===== */
-  socket.on("join-request", ({ roomCode, studentName }) => {  
+  socket.on("join-request", ({ roomCode, studentName }) => {
     socket.studentName = studentName; // ✅ ADD THIS
     const room = io.sockets.adapter.rooms.get(roomCode);
     if (room) {
@@ -1420,10 +1420,10 @@ io.on("connection", (socket) => {
         socketId,
         studentName: studentSocket.studentName
       });
-      
+
       // ✅ SEND UPDATED LIST TO TEACHER
       socket.emit("update-student-list", activeStudents[roomCode]);
-      
+
       studentSocket.emit("approved");
       socket.emit("student-joined", socketId);
     }
@@ -1462,7 +1462,7 @@ io.on("connection", (socket) => {
   });
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
-  
+
     for (const room in activeStudents) {
       activeStudents[room] = activeStudents[room].filter(
         s => s.socketId !== socket.id
@@ -1470,7 +1470,31 @@ io.on("connection", (socket) => {
       io.to(room).emit("update-student-list", activeStudents[room]);
     }
   });
-  
+
+  /* ===== REMOVE STUDENT BY TEACHER ===== */
+  socket.on("remove-student", ({ socketId, roomCode }) => {
+
+    const studentSocket = io.sockets.sockets.get(socketId);
+
+    if (studentSocket) {
+      studentSocket.leave(roomCode);
+      studentSocket.emit("removed-by-teacher");
+    }
+
+    // Remove from active list
+    if (activeStudents[roomCode]) {
+      activeStudents[roomCode] =
+        activeStudents[roomCode].filter(
+          s => s.socketId !== socketId
+        );
+
+      io.to(roomCode).emit(
+        "update-student-list",
+        activeStudents[roomCode]
+      );
+    }
+  });
+
 });   // ✅ THIS WAS MISSING (close io.on)
 
 /* 🔥 Start Server */
