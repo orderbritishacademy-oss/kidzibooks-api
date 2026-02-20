@@ -1371,13 +1371,11 @@ app.use("/olympiad_uploads", express.static(olympiadUploadDir));
 /* ================= SERVER ================= */
 // const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => console.log("Server running on", PORT));
-/* ================= SOCKET.IO SERVER ================= */
 
+/* ============================= SOCKET.IO SERVER =============================================== */
 const PORT = process.env.PORT || 5000;
-
 /* 🔥 Create HTTP Server */
 const server = http.createServer(app);
-
 /* 🔥 Attach Socket.io */
 const io = new Server(server, {
   cors: { origin: "*" }
@@ -1385,9 +1383,9 @@ const io = new Server(server, {
 
 /* 🔥 SOCKET EVENTS */
 io.on("connection", (socket) => {
-
+  
   console.log("User connected:", socket.id);
-
+  
   /* ===== Teacher creates class ===== */
   socket.on("create-class", (roomCode) => {
     socket.join(roomCode);
@@ -1395,11 +1393,41 @@ io.on("connection", (socket) => {
   });
 
   /* ===== Student joins class ===== */
-  socket.on("join-class", (roomCode) => {
-    socket.join(roomCode);
-    socket.to(roomCode).emit("student-joined", socket.id);
+ /* ===== Student sends join request ===== */
+  socket.on("join-request", (data) => {
+      const { roomCode, studentName } = data;
+      // send request to teacher
+      socket.to(roomCode).emit("new-join-request", {
+        socketId: socket.id,
+        studentName,
+        roomCode
+      });
+    });
+/* ===== Teacher approves student ===== */
+  socket.on("approve-student", (student) => {
+    const { socketId, roomCode } = student;
+    // join student to room
+    const studentSocket = io.sockets.sockets.get(socketId);
+    if (studentSocket) {
+      studentSocket.join(roomCode);
+      // notify teacher
+      socket.emit("student-approved", socketId);
+      // notify student
+      studentSocket.emit("approved");
+      // start WebRTC
+      socket.emit("student-joined", socketId);
+    }
   });
-
+  
+  /* ===== Teacher rejects student ===== */
+  socket.on("reject-student", (student) => {
+    const { socketId } = student;
+    const studentSocket = io.sockets.sockets.get(socketId);
+    if (studentSocket) {
+      studentSocket.emit("rejected");
+    }
+  });
+  
   /* ===== WebRTC Offer ===== */
   socket.on("offer", (data) => {
     socket.to(data.to).emit("offer", {
@@ -1417,7 +1445,6 @@ io.on("connection", (socket) => {
   socket.on("ice-candidate", (data) => {
     socket.to(data.to).emit("ice-candidate", data.candidate);
   });
-
 });
 
 /* 🔥 Start Server */
