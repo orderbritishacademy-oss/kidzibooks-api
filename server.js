@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 // const OpenAI = require("openai");
+/* ================= SOCKET.IO IMPORT ================= */
+const http = require("http");
+const { Server } = require("socket.io");
 
 /* ✅ PDF UPLOAD */
 const multer = require("multer");
@@ -153,6 +156,16 @@ const SchoolSchema = new mongoose.Schema({
   adminPassword: { type: String, required: true }
 });
 const School = mongoose.model("School", SchoolSchema);
+
+/* ================= CLASSROOM MODEL ================= */
+const ClassroomSchema = new mongoose.Schema({
+  schoolCode: String,
+  teacherId: String,
+  roomCode: String,
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+const Classroom = mongoose.model("Classroom", ClassroomSchema);
 
 /* ================= EXAM DATA FILE ================= */
 const dataDir = path.join(__dirname, "data");
@@ -1305,6 +1318,50 @@ app.delete("/api/deleteSubmission/:id", async (req, res) => {
   }
 });
 
+/* ================= CREATE CLASSROOM ================= */
+app.post("/api/classroom/create", async (req, res) => {
+  try {
+    const { schoolCode, teacherId } = req.body;
+
+    const roomCode = Math.random()
+      .toString(36)
+      .substring(2, 8)
+      .toUpperCase();
+
+    await Classroom.create({
+      schoolCode,
+      teacherId,
+      roomCode
+    });
+
+    res.json({
+      success: true,
+      roomCode
+    });
+
+  } catch (err) {
+    console.error("CLASSROOM CREATE ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+/* ================= VERIFY CLASSROOM ================= */
+app.get("/api/classroom/:roomCode", async (req, res) => {
+  try {
+    const classroom = await Classroom.findOne({
+      roomCode: req.params.roomCode,
+      isActive: true
+    });
+
+    if (!classroom)
+      return res.json({ success: false });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    res.json({ success: false });
+  }
+});
 /* ================= STATIC FILE SERVING ================= */
 app.use("/uploads", express.static(imageUploadDir));
 
@@ -1312,5 +1369,58 @@ app.use("/exam_uploads", express.static(examUploadDir));
 app.use("/olympiad_uploads", express.static(olympiadUploadDir));
 
 /* ================= SERVER ================= */
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => console.log("Server running on", PORT));
+/* ================= SOCKET.IO SERVER ================= */
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log("Server running on", PORT));
+
+/* 🔥 Create HTTP Server */
+const server = http.createServer(app);
+
+/* 🔥 Attach Socket.io */
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+/* 🔥 SOCKET EVENTS */
+io.on("connection", (socket) => {
+
+  console.log("User connected:", socket.id);
+
+  /* ===== Teacher creates class ===== */
+  socket.on("create-class", (roomCode) => {
+    socket.join(roomCode);
+    socket.emit("class-created", roomCode);
+  });
+
+  /* ===== Student joins class ===== */
+  socket.on("join-class", (roomCode) => {
+    socket.join(roomCode);
+    socket.to(roomCode).emit("student-joined", socket.id);
+  });
+
+  /* ===== WebRTC Offer ===== */
+  socket.on("offer", (data) => {
+    socket.to(data.to).emit("offer", {
+      offer: data.offer,
+      from: socket.id
+    });
+  });
+
+  /* ===== WebRTC Answer ===== */
+  socket.on("answer", (data) => {
+    socket.to(data.to).emit("answer", data.answer);
+  });
+
+  /* ===== ICE Candidate ===== */
+  socket.on("ice-candidate", (data) => {
+    socket.to(data.to).emit("ice-candidate", data.candidate);
+  });
+
+});
+
+/* 🔥 Start Server */
+server.listen(PORT, () => {
+  console.log("Server running on", PORT);
+});
