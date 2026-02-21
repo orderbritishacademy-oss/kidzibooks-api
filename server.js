@@ -1406,28 +1406,34 @@ io.on("connection", (socket) => {
       });
     }
   });
-    /* ===== Teacher approves student ===== */
-    socket.on("approve-student", ({ socketId, roomCode }) => {
-      const studentSocket = io.sockets.sockets.get(socketId);
-      if (studentSocket) {
-    
-        studentSocket.join(roomCode);
-        studentSocket.emit("approved");
-        // 🔥 ADD STUDENT TO ACTIVE LIST
-        if (!activeStudents[roomCode]) {
-          activeStudents[roomCode] = [];
-        }
-       activeStudents[roomCode].push({
+  /* ===== Teacher approves student ===== */
+  socket.on("approve-student", ({ socketId, roomCode }) => {
+    const studentSocket = io.sockets.sockets.get(socketId);
+    if (studentSocket) {
+
+      studentSocket.join(roomCode);
+      studentSocket.emit("approved");
+      // 🔥 ADD STUDENT TO ACTIVE LIST
+      if (!activeStudents[roomCode]) {
+        activeStudents[roomCode] = [];
+      }
+      // activeStudents[roomCode].push({
+      //    socketId,
+      //    studentName: studentSocket.studentName || "Student"
+      //  });
+      if (!activeStudents[roomCode].some(s => s.socketId === socketId)) {
+        activeStudents[roomCode].push({
           socketId,
           studentName: studentSocket.studentName || "Student"
         });
-        // 🔥 SEND UPDATED LIST TO TEACHER
-        io.to(roomCode).emit(
-          "update-student-list",
-          activeStudents[roomCode]
-        );
-        socket.emit("student-joined", socketId);
       }
+      // 🔥 SEND UPDATED LIST TO TEACHER
+      io.to(roomCode).emit(
+        "update-student-list",
+        activeStudents[roomCode]
+      );
+      socket.emit("student-joined", socketId);
+    }
   });
 
   /* ===== Teacher rejects student ===== */
@@ -1494,6 +1500,48 @@ io.on("connection", (socket) => {
         activeStudents[roomCode]
       );
     }
+  });
+  /* ===== Teacher rejoin after refresh =================21/02/26 ==== */
+  socket.on("rejoin-class", async (roomCode) => {
+    const classroom = await Classroom.findOne({
+      roomCode,
+      isActive: true
+    });
+
+    if (classroom) {
+      socket.join(roomCode);
+
+      // 🔥 Send current student list again
+      if (activeStudents[roomCode]) {
+        socket.emit(
+          "update-student-list",
+          activeStudents[roomCode]
+        );
+      }
+    }
+  });
+  /* ===== Teacher closes class==============================21/02/26 ===== */
+  socket.on("close-class", async (roomCode) => {
+    // Set classroom inactive in DB
+    await Classroom.updateOne(
+      { roomCode },
+      { $set: { isActive: false } }
+    );
+
+    // Remove all students
+    if (activeStudents[roomCode]) {
+      activeStudents[roomCode].forEach(student => {
+        const studentSocket =
+          io.sockets.sockets.get(student.socketId);
+
+        if (studentSocket) {
+          studentSocket.emit("removed-by-teacher");
+          studentSocket.leave(roomCode);
+        }
+      });
+      delete activeStudents[roomCode];
+    }
+    io.to(roomCode).emit("class-closed");
   });
 
 });   // ✅ THIS WAS MISSING (close io.on)
