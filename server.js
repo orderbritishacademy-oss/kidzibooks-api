@@ -1382,14 +1382,22 @@ const io = new Server(server, {
 });
 // ✅ ADD THIS
 const activeStudents = {};
+// ✅ STORE TEACHER SOCKET PER ROOM
+const teacherSockets = {};
 /* 🔥 SOCKET EVENTS */
 io.on("connection", (socket) => {
 
   console.log("User connected:", socket.id);
 
   /* ===== Teacher creates class ===== */
+  // socket.on("create-class", (roomCode) => {
+  //   socket.join(roomCode);
+  //   socket.emit("class-created", roomCode);
+  // });
   socket.on("create-class", (roomCode) => {
     socket.join(roomCode);
+    // ✅ Save teacher socket
+    teacherSockets[roomCode] = socket.id;
     socket.emit("class-created", roomCode);
   });
 
@@ -1467,9 +1475,34 @@ io.on("connection", (socket) => {
       from: socket.id
     });
   });
+  /* ===== PRIVATE TEACHER-STUDENT CHAT ===== */
+  socket.on("private-message", ({ roomCode, toStudentId, message }) => {
+    const teacherId = teacherSockets[roomCode];
+    // 🔥 If TEACHER is sending
+    if (socket.id === teacherId) {
+      const studentSocket = io.sockets.sockets.get(toStudentId);
+      if (studentSocket) {
+        studentSocket.emit("receive-message", {
+          from: "teacher",
+          message
+        });
+      }
+    }
+  
+    // 🔥 If STUDENT is sending
+    else {
+      const teacherSocket = io.sockets.sockets.get(teacherId);
+      if (teacherSocket) {
+        teacherSocket.emit("receive-message", {
+          from: "student",
+          studentId: socket.id,
+          message
+        });
+      }
+    }
+  });
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
-
     for (const room in activeStudents) {
       activeStudents[room] = activeStudents[room].filter(
         s => s.socketId !== socket.id
