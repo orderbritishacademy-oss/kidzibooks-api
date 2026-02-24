@@ -1440,8 +1440,7 @@ io.on("connection", (socket) => {
         "update-student-list",
         activeStudents[roomCode]
       );
-      // socket.emit("student-joined", socketId);
-      io.to(teacherSockets[roomCode]).emit("student-joined", socketId);
+      socket.emit("student-joined", socketId);
     }
   });
 
@@ -1505,14 +1504,44 @@ io.on("connection", (socket) => {
     }
   });
   /* ===== DELETE MESSAGE FOR BOTH SIDES ===== */
-  /* ===== DELETE MESSAGE FOR BOTH SIDES (ULTRA CLEAN) ===== */
+  /* ===== DELETE MESSAGE FOR BOTH SIDES (FINAL FIX) ===== */
   socket.on("delete-message", ({ roomCode, chatId, messageId }) => {
-    io.to(roomCode).emit("message-deleted", {
-      chatId,
-      messageId
-    });
+    const teacherId = teacherSockets[roomCode];
+    // 🔥 If TEACHER is deleting
+    if (socket.id === teacherId) {
+      // Send delete event to the student
+      const studentSocket = io.sockets.sockets.get(chatId);
+      if (studentSocket) {
+        studentSocket.emit("message-deleted", {
+          chatId,      // student chat id
+          messageId
+        });
+      }
+      // Also delete on teacher side
+      socket.emit("message-deleted", {
+        chatId,
+        messageId
+      });
+    }
+
+    // 🔥 If STUDENT is deleting
+    else {
+      // Send delete event to teacher
+      const teacherSocket = io.sockets.sockets.get(teacherId);
+      if (teacherSocket) {
+        teacherSocket.emit("message-deleted", {
+          chatId: socket.id,   // student socket id
+          messageId
+        });
+      }
+      // Delete on student side
+      socket.emit("message-deleted", {
+        chatId: socket.id,   // 🔥 FIXED (IMPORTANT)
+        messageId
+      });
+    }
   });
-      
+
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
     for (const room in activeStudents) {
@@ -1547,42 +1576,24 @@ io.on("connection", (socket) => {
     }
   });
   /* ===== Teacher rejoin after refresh =================21/02/26 ==== */
-  socket.on("rejoin-class", async ({ roomCode, role }) => {
-  const classroom = await Classroom.findOne({
-    roomCode,
-    isActive: true
+  socket.on("rejoin-class", async (roomCode) => {
+    const classroom = await Classroom.findOne({
+      roomCode,
+      isActive: true
+    });
+
+    if (classroom) {
+      socket.join(roomCode);
+
+      // 🔥 Send current student list again
+      if (activeStudents[roomCode]) {
+        socket.emit(
+          "update-student-list",
+          activeStudents[roomCode]
+        );
+      }
+    }
   });
-  if (!classroom) return;
-  socket.join(roomCode);
-
-  // ✅ If TEACHER
-  if (role === "teacher") {
-    teacherSockets[roomCode] = socket.id;
-    if (activeStudents[roomCode]) {
-      socket.emit("update-student-list", activeStudents[roomCode]);
-    }
-    return;
-  }
-
-  // ✅ If STUDENT
-  if (role === "student") {
-
-    if (!activeStudents[roomCode]) {
-      activeStudents[roomCode] = [];
-    }
-
-    if (!activeStudents[roomCode].some(s => s.socketId === socket.id)) {
-      activeStudents[roomCode].push({
-        socketId: socket.id,
-        studentName: socket.studentName || "Student"
-      });
-    }
-    io.to(roomCode).emit(
-      "update-student-list",
-      activeStudents[roomCode]
-    );
-  }
-});
   /* ===== Teacher closes class==============================21/02/26 ===== */
   socket.on("close-class", async (roomCode) => {
     // Set classroom inactive in DB
