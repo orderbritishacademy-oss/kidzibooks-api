@@ -1546,40 +1546,40 @@ io.on("connection", (socket) => {
     }
   });
   /* ===== Teacher rejoin after refresh =================21/02/26 ==== */
-  socket.on("rejoin-class", async (roomCode) => {
+  socket.on("rejoin-class", async ({ roomCode, role }) => {
   const classroom = await Classroom.findOne({
     roomCode,
     isActive: true
   });
+  if (!classroom) return;
+  socket.join(roomCode);
 
-  if (classroom) {
-    socket.join(roomCode);
+  // ✅ If TEACHER
+  if (role === "teacher") {
+    teacherSockets[roomCode] = socket.id;
+    if (activeStudents[roomCode]) {
+      socket.emit("update-student-list", activeStudents[roomCode]);
+    }
+    return;
+  }
 
-    // If teacher
-    if (teacherSockets[roomCode] === socket.id) {
-      if (activeStudents[roomCode]) {
-        socket.emit("update-student-list", activeStudents[roomCode]);
-      }
+  // ✅ If STUDENT
+  if (role === "student") {
+
+    if (!activeStudents[roomCode]) {
+      activeStudents[roomCode] = [];
     }
 
-    // 🔥 ALSO ADD STUDENT BACK TO ROOM LIST
-    else {
-      if (!activeStudents[roomCode]) {
-        activeStudents[roomCode] = [];
-      }
-
-      if (!activeStudents[roomCode].some(s => s.socketId === socket.id)) {
-        activeStudents[roomCode].push({
-          socketId: socket.id,
-          studentName: socket.studentName || "Student"
-        });
-      }
-
-      io.to(roomCode).emit(
-        "update-student-list",
-        activeStudents[roomCode]
-      );
+    if (!activeStudents[roomCode].some(s => s.socketId === socket.id)) {
+      activeStudents[roomCode].push({
+        socketId: socket.id,
+        studentName: socket.studentName || "Student"
+      });
     }
+    io.to(roomCode).emit(
+      "update-student-list",
+      activeStudents[roomCode]
+    );
   }
 });
   /* ===== Teacher closes class==============================21/02/26 ===== */
