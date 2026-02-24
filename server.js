@@ -1440,7 +1440,8 @@ io.on("connection", (socket) => {
         "update-student-list",
         activeStudents[roomCode]
       );
-      socket.emit("student-joined", socketId);
+      // socket.emit("student-joined", socketId);
+      io.to(teacherSockets[roomCode]).emit("student-joined", socketId);
     }
   });
 
