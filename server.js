@@ -1476,7 +1476,8 @@ io.on("connection", (socket) => {
     });
   });
   /* ===== PRIVATE TEACHER-STUDENT CHAT ===== */
-  socket.on("private-message", ({ roomCode, toStudentId, message }) => {
+  /* ===== PRIVATE TEACHER-STUDENT CHAT ===== */
+  socket.on("private-message", ({ roomCode, toStudentId, message, messageId }) => {
     const teacherId = teacherSockets[roomCode];
     // 🔥 If TEACHER is sending
     if (socket.id === teacherId) {
@@ -1484,11 +1485,11 @@ io.on("connection", (socket) => {
       if (studentSocket) {
         studentSocket.emit("receive-message", {
           from: "teacher",
-          message
+          message,
+          messageId   // ✅ SEND ID
         });
       }
     }
-  
     // 🔥 If STUDENT is sending
     else {
       const teacherSocket = io.sockets.sockets.get(teacherId);
@@ -1496,11 +1497,48 @@ io.on("connection", (socket) => {
         teacherSocket.emit("receive-message", {
           from: "student",
           studentId: socket.id,
-          message
+          message,
+          messageId   // ✅ SEND ID
         });
       }
     }
   });
+  /* ===== DELETE MESSAGE FOR BOTH SIDES ===== */
+  socket.on("delete-message", ({ roomCode, chatId, messageId }) => {
+    const teacherId = teacherSockets[roomCode];
+    // 🔥 If teacher deleting
+    if (socket.id === teacherId) {
+      // delete for student
+      const studentSocket = io.sockets.sockets.get(chatId);
+      if (studentSocket) {
+        studentSocket.emit("message-deleted", {
+          chatId: socket.id,
+          messageId
+        });
+      }
+  
+      // delete for teacher (self)
+      socket.emit("message-deleted", {
+        chatId,
+        messageId
+      });
+    }
+    // 🔥 If student deleting
+    else {
+      const teacherSocket = io.sockets.sockets.get(teacherId);
+      if (teacherSocket) {
+        teacherSocket.emit("message-deleted", {
+          chatId: socket.id,
+          messageId
+        });
+      }
+      socket.emit("message-deleted", {
+        chatId: teacherId,
+        messageId
+      });
+    }
+  });
+    
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
     for (const room in activeStudents) {
