@@ -1504,42 +1504,12 @@ io.on("connection", (socket) => {
     }
   });
   /* ===== DELETE MESSAGE FOR BOTH SIDES ===== */
-  /* ===== DELETE MESSAGE FOR BOTH SIDES (FINAL FIX) ===== */
+  /* ===== DELETE MESSAGE FOR BOTH SIDES (ULTRA CLEAN) ===== */
   socket.on("delete-message", ({ roomCode, chatId, messageId }) => {
-    const teacherId = teacherSockets[roomCode];
-    // 🔥 If TEACHER is deleting
-    if (socket.id === teacherId) {
-      // Send delete event to the student
-      const studentSocket = io.sockets.sockets.get(chatId);
-      if (studentSocket) {
-        studentSocket.emit("message-deleted", {
-          chatId,      // student chat id
-          messageId
-        });
-      }
-      // Also delete on teacher side
-      socket.emit("message-deleted", {
-        chatId,
-        messageId
-      });
-    }
-  
-    // 🔥 If STUDENT is deleting
-    else {
-      // Send delete event to teacher
-      const teacherSocket = io.sockets.sockets.get(teacherId);
-      if (teacherSocket) {
-        teacherSocket.emit("message-deleted", {
-          chatId: socket.id,   // student socket id
-          messageId
-        });
-      }
-      // Delete on student side
-      socket.emit("message-deleted", {
-        chatId: socket.id,   // 🔥 FIXED (IMPORTANT)
-        messageId
-      });
-    }
+    io.to(roomCode).emit("message-deleted", {
+      chatId,
+      messageId
+    });
   });
       
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
