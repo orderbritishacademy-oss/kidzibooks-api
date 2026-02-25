@@ -38,17 +38,18 @@ const groq = new Groq({
 const TeacherSchema = new mongoose.Schema({
   schoolCode: String,
   teacherId: String,
-  password: String
+  password: String,
+  photo: String   // ✅ ADD THIS
 });
 
 const StudentSchema = new mongoose.Schema({
   schoolCode: String,
   studentId: String,
   class: String,
-  section: String,   // ✅ ADD THIS
+  section: String, 
   name: String,
   password: String,
-
+  photo: String,   // ✅ ADD THIS
   // ✅ PERFORMANCE DATA
   totalScore: { type: Number, default: 0 },
   progress: { type: Number, default: 0 },   // %
@@ -71,10 +72,8 @@ const ExamSubmissionSchema = new mongoose.Schema({
   examName: String,
   subject: String,
   chapter: String,
-
   questions: Array,
   answers: Object,
-
   result: {               // ✅ ADD THIS BLOCK
     obtainedMarks: Number,
     totalMarks: Number,
@@ -82,13 +81,11 @@ const ExamSubmissionSchema = new mongoose.Schema({
     level: String,
     rank: String
   },
-
   submittedAt: {
     type: Date,
     default: Date.now
   }
 });
-
 const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
 
 /* ================= QUIZ MODEL (LINK BASED EXAM) ================= */
@@ -101,7 +98,6 @@ const QuizSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
 const Quiz = mongoose.model("Quiz", QuizSchema);
 
 /* ================= LINK EXAM STUDENT MODEL ================= */
@@ -174,10 +170,8 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const examDataFile = path.join(dataDir, "allExams.json");
 let allExams = [];// 🔥 School exam
 
-
 /* ✅ NEW: OLYMPIAD DATA FILE */
 const olympiadDataFile = path.join(dataDir, "currentOlympiadExam.json");
-
 // let currentExam = null; // 🔥 School exam
 let currentOlympiadExam = null; // 🔥 Olympiad exam (SEPARATE)
 
@@ -202,6 +196,7 @@ if (fs.existsSync(olympiadDataFile)) {
     console.log("❌ Failed to load olympiad exam");
   }
 }
+
 /* ================= QUESTION IMAGE UPLOAD ================= */
 const imageUploadDir = path.join(__dirname, "uploads");
 
@@ -215,7 +210,6 @@ const imageStorage = multer.diskStorage({
     cb(null, Date.now() + "_IMG_" + file.originalname);
   }
 });
-
 const uploadImage = multer({ storage: imageStorage });
 
 /* ===== IMAGE UPLOAD API ===== */
@@ -229,7 +223,6 @@ app.post("/api/uploadImage", uploadImage.single("image"), (req, res) => {
 /* ================= EXAM PDF STORAGE (SCHOOL PORTAL) ================= */
 const examUploadDir = path.join(__dirname, "exam_uploads");
 if (!fs.existsSync(examUploadDir)) fs.mkdirSync(examUploadDir, { recursive: true });
-
 const examStorage = multer.diskStorage({
   destination: examUploadDir,
   filename: (req, file, cb) => {
@@ -241,15 +234,27 @@ const uploadExamPDF = multer({ storage: examStorage });
 /* ================= OLYMPIAD PDF STORAGE ================= */
 const olympiadUploadDir = path.join(__dirname, "olympiad_uploads");
 if (!fs.existsSync(olympiadUploadDir)) fs.mkdirSync(olympiadUploadDir, { recursive: true });
-
 const olympiadStorage = multer.diskStorage({
   destination: olympiadUploadDir,
   filename: (req, file, cb) => {
     cb(null, Date.now() + "_OLYMPIAD_" + file.originalname);
   }
 });
-
 const uploadOlympiadPDF = multer({ storage: olympiadStorage });
+
+/* ================= PROFILE PHOTO UPLOAD ================= */
+const profileUploadDir = path.join(__dirname, "profile_uploads");
+if (!fs.existsSync(profileUploadDir)) {
+  fs.mkdirSync(profileUploadDir, { recursive: true });
+}
+const profileStorage = multer.diskStorage({
+  destination: profileUploadDir,
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "_PROFILE_" + file.originalname);
+  }
+});
+const uploadProfilePhoto = multer({ storage: profileStorage });
+app.use("/profile_uploads", express.static(profileUploadDir));
 
 /* ================= TEST ================= */
 app.get("/", (req, res) => {
@@ -259,12 +264,9 @@ app.get("/", (req, res) => {
 /* ================= CREATE QUIZ (LINK EXAM) ================= */
 app.post("/api/createQuiz", async (req, res) => {
   try {
-
     const { name, description, questions } = req.body;
-
     if (!name || !questions)
       return res.json({ success: false });
-
     const quiz = await Quiz.create({
       name,
       description,
@@ -400,31 +402,32 @@ app.post("/api/auth/school-login", async (req, res) => {
 });
 
 /* ---- REGISTER TEACHER ---- */
-app.post("/api/auth/register-teacher", async (req, res) => {
+app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async (req, res) => {
   let { schoolCode, teacherId, password } = req.body;
-
   schoolCode = schoolCode?.trim();
   teacherId = teacherId?.trim();
   password = password?.trim();
-
   if (!schoolCode || !teacherId || !password)
     return res.status(400).json({ msg: "Invalid input" });
-
   const school = await School.findOne({ schoolCode });
   if (!school) return res.status(400).json({ msg: "Invalid school code" });
-
   const exists = await Teacher.findOne({ schoolCode, teacherId });
-
   if (exists) return res.status(400).json({ msg: "Teacher already exists" });
-
   // const hash = await bcrypt.hash(password, 10);
-
-  await Teacher.create({ schoolCode, teacherId, password });
+  const photoUrl = req.file
+  ? `/profile_uploads/${req.file.filename}`
+  : "";
+  await Teacher.create({
+    schoolCode,
+    teacherId,
+    password,
+    photo: photoUrl
+  });
   res.json({ success: true });
 });
 
 /* ---- REGISTER STUDENT ---- */
-app.post("/api/auth/register-student", async (req, res) => {
+app.post("/api/auth/register-student", uploadProfilePhoto.single("photo"), async (req, res) => {
   let { schoolCode, studentId, class: stuClass, section, name, password } = req.body;
   schoolCode = schoolCode?.trim();
   studentId = studentId?.trim();
@@ -444,21 +447,20 @@ app.post("/api/auth/register-student", async (req, res) => {
     class: stuClass,
     section
   });
-
   if (exists) return res.status(400).json({ msg: "Student already exists" });
-
   // const hash = await bcrypt.hash(password, 10);
-
+ const photoUrl = req.file
+  ? `/profile_uploads/${req.file.filename}`
+  : "";
   await Student.create({
     schoolCode,
     studentId,
     class: stuClass,
-    section,     // ✅ ADD THIS
+    section,
     name,
-    password
+    password,
+    photo: photoUrl
   });
-
-
   res.json({ success: true });
 });
 
@@ -488,7 +490,8 @@ app.post("/api/auth/teacher-login", async (req, res) => {
   // ✅ CHANGE THIS RESPONSE
   res.json({
     token,
-    schoolName: school?.schoolName || ""
+    schoolName: school?.schoolName || "",
+    photo: teacher.photo || ""
   });
 });
 
@@ -523,13 +526,14 @@ app.post("/api/auth/student-login", async (req, res) => {
   );
 
   const school = await School.findOne({ schoolCode });
-  res.json({
+   res.json({
     token,
     name: student.name,
     studentId: student.studentId,
     class: student.class,
-    section: student.section,   // ✅ ADD
-    schoolName: school?.schoolName || ""
+    section: student.section,
+    schoolName: school?.schoolName || "",
+    photo: student.photo || ""
   });
 });
 
