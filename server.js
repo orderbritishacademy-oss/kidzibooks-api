@@ -1109,21 +1109,14 @@ IMPORTANT FORMAT RULES (FOLLOW STRICTLY):
 - Questions must be strictly from SUBJECT and TOPIC
 
 Start the paper EXACTLY like this:
-
 QUESTION PAPER – ${topic.toUpperCase()}
-
 SECTION: ${type}
-
 Then generate ${count} questions under this section.
-
 After questions write:
-
 ANSWER KEY
 and then answers.
 `;
     }
-
-
     const chat = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant", // ⭐ BEST FREE MODEL
       messages: [
@@ -1136,7 +1129,6 @@ and then answers.
     });
 
     const output = chat.choices[0]?.message?.content || "";
-
     console.log("AI OUTPUT:", output.slice(0, 200));
     res.json({
       success: true,
@@ -1149,8 +1141,25 @@ and then answers.
   }
 });
 
+
+/* ================= ✅ VERIFY TOKEN ================= */
+// 🔐 VERIFY TOKEN
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ msg: "No token" });
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // contains schoolCode
+    next();
+  } catch (err) {
+    return res.status(401).json({ msg: "Invalid token" });
+  }
+};
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
-app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
+app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req, res) => {
   try {
 
     const fileUrl = `/exam_uploads/${req.file.filename}`;
@@ -1177,14 +1186,14 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
 
     const newExam = {
       id: Date.now(),
+      schoolCode: req.user.schoolCode,  // ✅ ADD THIS
+    
       name: req.file.originalname,
       url: fileUrl,
       class: meta.class,
       subject: meta.subject,
       chapter: meta.chapter,
-
-      type: meta.type || "worksheet",   // ✅ ADD THIS LINE
-
+      type: meta.type || "worksheet",
       questions: fixedQuestions,
       answers: meta.answers || {},
       pageImages: meta.pageImages || []
@@ -1201,9 +1210,13 @@ app.post("/api/uploadExam", uploadExamPDF.single("pdf"), async (req, res) => {
 });
 
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
-app.get("/api/allExams", (req, res) => {
-  res.json(allExams);
-});
+app.get("/api/exams", verifyToken, (req, res) => {
+    const schoolCode = req.user.schoolCode;
+    const filtered = allExams.filter(
+      exam => exam.schoolCode === schoolCode
+    );
+    res.json(filtered);
+  });
 /* ================= GET QUIZ BY ID ================= */
 app.get("/api/exam/:id", async (req, res) => {
   try {
@@ -1223,25 +1236,26 @@ app.get("/api/exam/:id", async (req, res) => {
 });
 
 /* ================= ✅ STUDENT GET delete EXAM pdf================= */
-app.delete("/api/deleteExam/:id", (req, res) => {
-  const id = Number(req.params.id);
-
-  const exam = allExams.find(e => e.id === id);
-  if (!exam) return res.json({ success: false });
-
-  // ✅ DELETE PDF FILE
-  const filePath = path.join(__dirname, exam.url);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-
-  // ✅ DELETE FROM LIST
-  allExams = allExams.filter(e => e.id !== id);
-
-  fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
-
-  res.json({ success: true });
-});
+app.delete("/api/deleteExam/:id", verifyToken, (req, res) => {
+    const id = Number(req.params.id);
+    const schoolCode = req.user.schoolCode;
+    const exam = allExams.find(
+      e => e.id === id && e.schoolCode === schoolCode
+    );
+  
+    if (!exam) return res.json({ success: false });
+    const filePath = path.join(__dirname, exam.url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  
+    allExams = allExams.filter(
+      e => !(e.id === id && e.schoolCode === schoolCode)
+    );
+  
+    fs.writeFileSync(examDataFile, JSON.stringify(allExams, null, 2));
+    res.json({ success: true });
+  });
 
 
 /* ================= ✅ OLYMPIAD PDF UPLOAD ================= */
