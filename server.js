@@ -494,6 +494,26 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     photo: teacher.photo || ""
   });
 });
+/* ================= GET TEACHER PROFILE ================= */
+app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
+  try {
+    const { schoolCode, teacherId } = req.params;
+    const teacher = await Teacher.findOne(
+      { schoolCode, teacherId },
+      { password: 0 }
+    );
+    if (!teacher) {
+      return res.status(404).json({ success: false });
+    }
+    res.json({
+      success: true,
+      photo: teacher.photo || ""
+    });
+  } catch (err) {
+    console.error("PROFILE ERROR:", err);
+    res.status(500).json({ success: false });
+  }
+});
 
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
