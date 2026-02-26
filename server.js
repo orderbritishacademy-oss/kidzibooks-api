@@ -482,7 +482,11 @@ app.post("/api/auth/teacher-login", async (req, res) => {
   const school = await School.findOne({ schoolCode });
 
   const token = jwt.sign(
-    { role: "teacher", schoolCode },
+    {
+      role: "teacher",
+      schoolCode,
+      teacherId: teacher.teacherId   // ✅ ADD THIS
+    },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -1186,7 +1190,8 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
 
     const newExam = {
       id: Date.now(),
-      schoolCode: req.user.schoolCode,  // ✅ ADD THIS
+      schoolCode: req.user.schoolCode,
+      teacherId: req.user.teacherId,   // ✅ ADD THIS
     
       name: req.file.originalname,
       url: fileUrl,
@@ -1211,12 +1216,23 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
 
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 app.get("/api/exams", verifyToken, (req, res) => {
-    const schoolCode = req.user.schoolCode;
-    const filtered = allExams.filter(
+  const { schoolCode, role, teacherId } = req.user;
+  let filtered = [];
+  if (role === "teacher") {
+    // ✅ Teacher sees only their own uploads
+    filtered = allExams.filter(
+      exam =>
+        exam.schoolCode === schoolCode &&
+        exam.teacherId === teacherId
+    );
+  } else {
+    // ✅ Students see all exams of school
+    filtered = allExams.filter(
       exam => exam.schoolCode === schoolCode
     );
-    res.json(filtered);
-  });
+  }
+  res.json(filtered);
+});
 /* ================= GET QUIZ BY ID ================= */
 app.get("/api/exam/:id", async (req, res) => {
   try {
