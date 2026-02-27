@@ -72,6 +72,7 @@ const ExamSubmissionSchema = new mongoose.Schema({
   examName: String,
   subject: String,
   chapter: String,
+  type: { type: String, default: "worksheet" },  // ✅ ADDED
   questions: Array,
   answers: Object,
   result: {               // ✅ ADD THIS BLOCK
@@ -1311,7 +1312,8 @@ app.post("/api/submitExam", async (req, res) => {
   try {
     const submission = {
       ...req.body,
-      questions: req.body.questions || []   // ✅ ADD THIS
+      type: req.body.type || "worksheet",   // ✅ ADD THIS
+      questions: req.body.questions || []
     };
 
     await ExamSubmission.create(submission);
