@@ -1310,15 +1310,42 @@ app.get("/api/currentOlympiadExam", (req, res) => {
 /* ================= STUDENT SUBMIT EXAM ================= */
 app.post("/api/submitExam", async (req, res) => {
   try {
-    const submission = {
-      ...req.body,
-      type: req.body.type || "worksheet",   // ✅ ADD THIS
-      questions: req.body.questions || []
-    };
+    const {
+      schoolCode,
+      studentId,
+      studentName,
+      class: stuClass,
+      section,
+      examId,
+      examName,
+      subject,
+      chapter,
+      type,
+      questions,
+      answers,
+      result
+    } = req.body;
 
-    await ExamSubmission.create(submission);
-    console.log("✅ Exam submitted");
+    const submission = await ExamSubmission.create({
+      schoolCode,
+      studentId,
+      studentName,
+      class: stuClass,
+      section,
+      examId,
+      examName,
+      subject,
+      chapter,
+      type: type === "exam" ? "exam" : "worksheet",  // 🔥 IMPORTANT
+      questions,
+      answers,
+      result
+    });
+
+    console.log("✅ Exam submitted:", submission._id);
+
     res.json({ success: true });
+
   } catch (err) {
     console.error("SUBMIT EXAM ERROR:", err);
     res.status(500).json({ success: false });
