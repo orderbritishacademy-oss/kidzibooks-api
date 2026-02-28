@@ -59,6 +59,14 @@ const StudentSchema = new mongoose.Schema({
 });
 
 const Teacher = mongoose.model("Teacher", TeacherSchema);
+/* ================= PRINCIPAL MODEL ================= */
+const PrincipalSchema = new mongoose.Schema({
+  schoolCode: { type: String, required: true, unique: true }, // ✅ only 1 per school
+  principalId: { type: String, required: true },
+  password: { type: String, required: true }
+});
+
+const Principal = mongoose.model("Principal", PrincipalSchema);
 const Student = mongoose.model("Student", StudentSchema);
 
 /* ================= EXAM SUBMISSION MODEL ================= */
@@ -427,7 +435,39 @@ app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async
   });
   res.json({ success: true });
 });
+/* ---- REGISTER PRINCIPAL ---- */
+app.post("/api/auth/register-principal", async (req, res) => {
+  try {
+    let { schoolCode, principalId, password } = req.body;
 
+    schoolCode = schoolCode?.trim();
+    principalId = principalId?.trim();
+    password = password?.trim();
+
+    if (!schoolCode || !principalId || !password)
+      return res.status(400).json({ msg: "All fields required" });
+
+    const school = await School.findOne({ schoolCode });
+    if (!school) return res.status(400).json({ msg: "Invalid school code" });
+
+    // ✅ CHECK IF ALREADY EXISTS
+    const existing = await Principal.findOne({ schoolCode });
+    if (existing)
+      return res.status(400).json({ msg: "Principal already registered for this school" });
+
+    await Principal.create({
+      schoolCode,
+      principalId,
+      password
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("REGISTER PRINCIPAL ERROR:", err);
+    res.status(500).json({ msg: "Principal register failed" });
+  }
+});
 /* ---- REGISTER STUDENT ---- */
 app.post("/api/auth/register-student", uploadProfilePhoto.single("photo"), async (req, res) => {
   let { schoolCode, studentId, class: stuClass, section, name, password } = req.body;
@@ -500,7 +540,35 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     photo: teacher.photo || ""
   });
 });
+/* ---- PRINCIPAL LOGIN ---- */
+app.post("/api/auth/principal-login", async (req, res) => {
+  try {
+    let { schoolCode, principalId, password } = req.body;
 
+    schoolCode = schoolCode?.trim();
+    principalId = principalId?.trim();
+    password = password?.trim();
+
+    const principal = await Principal.findOne({ schoolCode, principalId });
+    if (!principal)
+      return res.status(401).json({ msg: "Invalid login" });
+
+    if (password !== principal.password)
+      return res.status(401).json({ msg: "Invalid login" });
+
+    const token = jwt.sign(
+      { role: "principal", schoolCode },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ token });
+
+  } catch (err) {
+    console.error("PRINCIPAL LOGIN ERROR:", err);
+    res.status(500).json({ msg: "Principal login failed" });
+  }
+});
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
   let { schoolCode, studentId, class: stuClass, section, password } = req.body;
@@ -793,7 +861,31 @@ app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
     res.status(500).json({ msg: "Failed to load students" });
   }
 });
+/* ================= PRINCIPAL GET ALL USERS ================= */
+app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
+  try {
+    const { schoolCode } = req.params;
 
+    const teachers = await Teacher.find(
+      { schoolCode },
+      { password: 0 }   // ❌ hide password for safety
+    );
+
+    const students = await Student.find(
+      { schoolCode },
+      { password: 0 }
+    );
+
+    res.json({
+      teachers,
+      students
+    });
+
+  } catch (err) {
+    console.error("PRINCIPAL FETCH ERROR:", err);
+    res.status(500).json({ msg: "Failed to load data" });
+  }
+});
 /* ================= SAVE STUDENT SCORE ================= */
 app.post("/api/student/save-score", async (req, res) => {
   try {
