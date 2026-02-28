@@ -1308,8 +1308,10 @@ app.get("/api/currentOlympiadExam", (req, res) => {
 });
 
 /* ================= STUDENT SUBMIT EXAM ================= */
+/* ================= STUDENT SUBMIT EXAM ================= */
 app.post("/api/submitExam", async (req, res) => {
   try {
+
     const {
       schoolCode,
       studentId,
@@ -1326,6 +1328,21 @@ app.post("/api/submitExam", async (req, res) => {
       result
     } = req.body;
 
+    /* 🔒 CHECK IF ALREADY SUBMITTED */
+    const existingSubmission = await ExamSubmission.findOne({
+      studentId,
+      examId,
+      type: "exam"
+    });
+
+    if (existingSubmission) {
+      return res.status(400).json({
+        success: false,
+        message: "Exam already solved by this student"
+      });
+    }
+
+    /* ✅ CREATE NEW SUBMISSION */
     const submission = await ExamSubmission.create({
       schoolCode,
       studentId,
@@ -1336,10 +1353,11 @@ app.post("/api/submitExam", async (req, res) => {
       examName,
       subject,
       chapter,
-      type: type === "exam" ? "exam" : "worksheet",  // 🔥 IMPORTANT
+      type: type === "exam" ? "exam" : "worksheet",
       questions,
       answers,
-      result
+      result,
+      submittedAt: new Date()   // 🔥 ADD THIS ALSO
     });
 
     console.log("✅ Exam submitted:", submission._id);
