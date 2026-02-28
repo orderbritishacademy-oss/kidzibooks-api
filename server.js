@@ -66,6 +66,7 @@ const ExamSubmissionSchema = new mongoose.Schema({
   schoolCode: String,
   studentId: String,
   studentName: String,
+  phone: String,  // 🔥 ADD THIS
   class: String,
   section: String,
   examId: String,
@@ -1311,11 +1312,11 @@ app.get("/api/currentOlympiadExam", (req, res) => {
 /* ================= STUDENT SUBMIT EXAM ================= */
 app.post("/api/submitExam", async (req, res) => {
   try {
-
     const {
       schoolCode,
       studentId,
       studentName,
+      phone,        // 🔥 ADD THIS
       class: stuClass,
       section,
       examId,
@@ -1327,13 +1328,16 @@ app.post("/api/submitExam", async (req, res) => {
       answers,
       result
     } = req.body;
-
     /* 🔒 CHECK IF ALREADY SUBMITTED */
+    /* 🔒 CHECK IF ALREADY SUBMITTED (STRONG CHECK) */
     const existingSubmission = await ExamSubmission.findOne({
-      studentId,
-      examId,
-      type: "exam"
-    });
+        examId,
+        type: "exam",
+        $or: [
+          { studentId },
+          { phone }
+        ]
+      });
 
     if (existingSubmission) {
       return res.status(400).json({
@@ -1347,6 +1351,7 @@ app.post("/api/submitExam", async (req, res) => {
       schoolCode,
       studentId,
       studentName,
+      phone,              // 🔥 ADD THIS
       class: stuClass,
       section,
       examId,
@@ -1359,11 +1364,8 @@ app.post("/api/submitExam", async (req, res) => {
       result,
       submittedAt: new Date()   // 🔥 ADD THIS ALSO
     });
-
     console.log("✅ Exam submitted:", submission._id);
-
     res.json({ success: true });
-
   } catch (err) {
     console.error("SUBMIT EXAM ERROR:", err);
     res.status(500).json({ success: false });
