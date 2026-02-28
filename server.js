@@ -712,6 +712,15 @@ app.post("/api/auth/reset-password", async (req, res) => {
       );
       if (!r.matchedCount) return res.status(404).json({ msg: "Student not found" });
     }
+    if (role === "principal") {
+  const r = await Principal.updateOne(
+    { schoolCode },
+    { $set: { password: newPassword } }
+  );
+
+  if (!r.matchedCount)
+    return res.status(404).json({ msg: "Principal not found" });
+}
 
     res.json({ success: true, msg: "Password updated successfully" });
 
