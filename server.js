@@ -569,6 +569,21 @@ app.post("/api/auth/principal-login", async (req, res) => {
     res.status(500).json({ msg: "Principal login failed" });
   }
 });
+/* ---- CHECK PRINCIPAL EXISTS ---- */
+app.get("/api/auth/check-principal/:schoolCode", async (req, res) => {
+  try {
+    const { schoolCode } = req.params;
+    const principal = await Principal.findOne({ schoolCode });
+    if (principal) {
+      return res.json({ exists: true });
+    } else {
+      return res.json({ exists: false });
+    }
+  } catch (err) {
+    console.error("CHECK PRINCIPAL ERROR:", err);
+    res.status(500).json({ exists: false });
+  }
+});
 /* ---- STUDENT LOGIN ---- */
 app.post("/api/auth/student-login", async (req, res) => {
   let { schoolCode, studentId, class: stuClass, section, password } = req.body;
