@@ -885,24 +885,46 @@ app.get("/api/teacher/students/:schoolCode/:stuClass", async (req, res) => {
     res.status(500).json({ msg: "Failed to load students" });
   }
 });
-/* ================= PRINCIPAL GET ALL USERS ================= */
+/* ================================================================================= PRINCIPAL GET ALL USERS ================= */
 app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
   try {
     const { schoolCode } = req.params;
-
+    // 🔹 Get teachers (hide password)
     const teachers = await Teacher.find(
       { schoolCode },
-      { password: 0 }   // ❌ hide password for safety
+      { password: 0 }
     );
-
+    // 🔹 Get students (hide password)
     const students = await Student.find(
       { schoolCode },
       { password: 0 }
     );
+    // 🔹 Get all exam submissions of this school
+    const submissions = await ExamSubmission.find({ schoolCode });
+    // ================= TEACHER REPORT =================
+    const teacherReports = teachers.map(t => {
+      const teacherSubmissions = submissions.filter(
+        sub => sub.schoolCode === schoolCode
+      );
+      return {
+        ...t._doc,
+        totalSubmissions: teacherSubmissions.length
+      };
+    });
 
+    // ================= STUDENT REPORT =================
+    const studentReports = students.map(s => {
+      const studentSubs = submissions.filter(
+        sub => sub.studentId === s.studentId
+      );
+      return {
+        ...s._doc,
+        totalExamsAttempted: studentSubs.length
+      };
+    });
     res.json({
-      teachers,
-      students
+      teachers: teacherReports,
+      students: studentReports
     });
 
   } catch (err) {
@@ -910,6 +932,7 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
     res.status(500).json({ msg: "Failed to load data" });
   }
 });
+
 /* ================= SAVE STUDENT SCORE ================= */
 app.post("/api/student/save-score", async (req, res) => {
   try {
