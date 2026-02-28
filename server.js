@@ -1370,6 +1370,22 @@ app.post("/api/submitExam", async (req, res) => {
   }
 });
 
+/* ================= STUDENT GET OWN SUBMISSIONS ================= */
+app.get("/api/student-submissions/:studentId", async (req, res) => {
+  try {
+    const submissions = await ExamSubmission.find({
+      studentId: req.params.studentId,
+      type: "exam"
+    });
+
+    res.json(submissions);
+
+  } catch (err) {
+    console.error("GET STUDENT SUBMISSIONS ERROR:", err);
+    res.json([]);
+  }
+});
+
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
 app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
   try {
