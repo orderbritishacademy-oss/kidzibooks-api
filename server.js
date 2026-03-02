@@ -72,6 +72,7 @@ const Student = mongoose.model("Student", StudentSchema);
 /* ================= EXAM SUBMISSION MODEL ================= */
 const ExamSubmissionSchema = new mongoose.Schema({
   schoolCode: String,
+  teacherId: String,   // ✅ ADD
   studentId: String,
   studentName: String,
   phone: String,  // 🔥 ADD THIS
@@ -906,7 +907,9 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
     // ================= TEACHER REPORT =================
     const teacherReports = teachers.map(t => {
       const teacherSubmissions = submissions.filter(
-        sub => sub.schoolCode === schoolCode
+        sub =>
+          sub.schoolCode === schoolCode &&   // ✅ FILTER BY SCHOOL
+          sub.teacherId === t.teacherId      // ✅ FILTER BY TEACHER
       );
       return {
         ...t._doc,
@@ -1457,7 +1460,7 @@ app.post("/api/submitExam", async (req, res) => {
       schoolCode,
       studentId,
       studentName,
-      phone,        // 🔥 ADD THIS
+      phone,
       class: stuClass,
       section,
       examId,
@@ -1469,17 +1472,25 @@ app.post("/api/submitExam", async (req, res) => {
       answers,
       result
     } = req.body;
-    /* 🔒 CHECK IF ALREADY SUBMITTED */
-    /* 🔒 CHECK IF ALREADY SUBMITTED (STRONG CHECK) */
-    const existingSubmission = await ExamSubmission.findOne({
-        examId,
-        type: "exam",
-        $or: [
-          { studentId },
-          { phone }
-        ]
-      });
 
+    // 🔎 FIND EXAM FROM FILE
+    const exam = allExams.find(
+      e => String(e.id) === String(examId)
+    );
+
+    if (!exam) {
+      return res.status(400).json({
+        success: false,
+        message: "Exam not found"
+      });
+    }
+
+    // 🔒 CHECK IF ALREADY SUBMITTED
+    const existingSubmission = await ExamSubmission.findOne({
+      examId,
+      type: "exam",
+      $or: [{ studentId }, { phone }]
+    });
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
@@ -1487,12 +1498,13 @@ app.post("/api/submitExam", async (req, res) => {
       });
     }
 
-    /* ✅ CREATE NEW SUBMISSION */
+    // ✅ CREATE SUBMISSION
     const submission = await ExamSubmission.create({
       schoolCode,
+      teacherId: exam.teacherId || null,   // ✅ FIXED
       studentId,
       studentName,
-      phone,              // 🔥 ADD THIS
+      phone,
       class: stuClass,
       section,
       examId,
@@ -1503,7 +1515,7 @@ app.post("/api/submitExam", async (req, res) => {
       questions,
       answers,
       result,
-      submittedAt: new Date()   // 🔥 ADD THIS ALSO
+      submittedAt: new Date()
     });
     console.log("✅ Exam submitted:", submission._id);
     res.json({ success: true });
@@ -1530,15 +1542,14 @@ app.get("/api/student-submissions/:studentId", async (req, res) => {
 });
 
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
-app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
+app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
   try {
-
+    const { schoolCode } = req.params;
+    const { teacherId } = req.user;   // ✅ from token
     const submissions = await ExamSubmission
-      .find({ schoolCode: req.params.schoolCode })
+      .find({ schoolCode, teacherId })   // ✅ FILTER HERE
       .sort({ submittedAt: -1 });
-
     res.json(submissions);
-
   } catch (err) {
     console.error("GET SUBMISSIONS ERROR:", err);
     res.json([]);
