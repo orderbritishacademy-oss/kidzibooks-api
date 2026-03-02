@@ -38,6 +38,7 @@ const groq = new Groq({
 const TeacherSchema = new mongoose.Schema({
   schoolCode: String,
   teacherId: String,
+  name: String,          // ✅ ADD THIS
   password: String,
   photo: String   // ✅ ADD THIS
 });
@@ -50,7 +51,6 @@ const StudentSchema = new mongoose.Schema({
   name: String,
   password: String,
   photo: String,   // ✅ ADD THIS
-  // ✅ PERFORMANCE DATA
   totalScore: { type: Number, default: 0 },
   progress: { type: Number, default: 0 },   // %
   level: { type: Number, default: 1 },
@@ -413,7 +413,7 @@ app.post("/api/auth/school-login", async (req, res) => {
 
 /* ---- REGISTER TEACHER ---- */
 app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async (req, res) => {
-  let { schoolCode, teacherId, password } = req.body;
+  let { schoolCode, teacherId, name, password } = req.body;
   schoolCode = schoolCode?.trim();
   teacherId = teacherId?.trim();
   password = password?.trim();
@@ -430,6 +430,7 @@ app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async
   await Teacher.create({
     schoolCode,
     teacherId,
+    name,            // ✅ ADD THIS
     password,
     photo: photoUrl
   });
@@ -538,6 +539,7 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     token,
     schoolName: school?.schoolName || "",
     photo: teacher.photo || ""
+    name: teacher.name || ""   // ✅ ADD THIS
   });
 });
 /* ---- PRINCIPAL LOGIN ---- */
