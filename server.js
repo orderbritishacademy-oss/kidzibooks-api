@@ -40,7 +40,8 @@ const TeacherSchema = new mongoose.Schema({
   teacherId: String,
   name: String,          // ✅ ADD THIS
   password: String,
-  photo: String   // ✅ ADD THIS
+  photo: String,  // ✅ ADD THIS
+  photoBase64: String    // ✅ ADD THIS
 });
 
 const StudentSchema = new mongoose.Schema({
@@ -425,15 +426,19 @@ app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async
   const exists = await Teacher.findOne({ schoolCode, teacherId });
   if (exists) return res.status(400).json({ msg: "Teacher already exists" });
   // const hash = await bcrypt.hash(password, 10);
-  const photoUrl = req.file
+ const photoUrl = req.file
   ? `/profile_uploads/${req.file.filename}`
   : "";
+  const photoBase64 = req.file
+    ? `data:${req.file.mimetype};base64,${fs.readFileSync(req.file.path).toString("base64")}`
+    : "";
   await Teacher.create({
     schoolCode,
     teacherId,
-    name,            // ✅ ADD THIS
+    name,
     password,
-    photo: photoUrl
+    photo: photoUrl,        // render storage
+    photoBase64: photoBase64  // 🔥 database storage
   });
   res.json({ success: true });
 });
@@ -496,35 +501,36 @@ app.post("/api/auth/register-student", uploadProfilePhoto.single("photo"), async
  const photoUrl = req.file
   ? `/profile_uploads/${req.file.filename}`
   : "";
-  await Student.create({
-    schoolCode,
-    studentId,
-    class: stuClass,
-    section,
-    name,
-    password,
-    photo: photoUrl
-  });
+
+  const photoBase64 = req.file
+    ? `data:${req.file.mimetype};base64,${fs.readFileSync(req.file.path).toString("base64")}`
+      : "";
+   await Student.create({
+      schoolCode,
+      studentId,
+      class: stuClass,
+      section,
+      name,
+      password,
+      photo: photoUrl,
+      photoBase64: photoBase64   // 🔥 ADD THIS
+    });
   res.json({ success: true });
 });
 
 /* ---- TEACHER LOGIN ---- */
 app.post("/api/auth/teacher-login", async (req, res) => {
   let { schoolCode, teacherId, password } = req.body;
-
   schoolCode = schoolCode?.trim();
   teacherId = teacherId?.trim();
   password = password?.trim();
-
   const teacher = await Teacher.findOne({ schoolCode, teacherId });
   if (!teacher) return res.status(401).json({ msg: "Invalid login" });
 
   if (password !== teacher.password)
     return res.status(401).json({ msg: "Invalid login" });
-
   // ✅ ADD THIS LINE
   const school = await School.findOne({ schoolCode });
-
   const token = jwt.sign(
     {
       role: "teacher",
@@ -534,13 +540,12 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
-
   // ✅ CHANGE THIS RESPONSE
   res.json({
     token,
     schoolName: school?.schoolName || "",
-    photo: teacher.photo || "",
-    name: teacher.name || ""   // ✅ ADD THIS
+    photo: teacher.photoBase64 || teacher.photo || "",
+    name: teacher.name || ""
   });
 });
 /* ---- PRINCIPAL LOGIN ---- */
@@ -625,7 +630,7 @@ app.post("/api/auth/student-login", async (req, res) => {
     class: student.class,
     section: student.section,
     schoolName: school?.schoolName || "",
-    photo: student.photo || ""
+    photo: student.photoBase64 || student.photo || ""
   });
 });
 
