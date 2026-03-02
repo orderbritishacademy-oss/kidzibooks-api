@@ -995,8 +995,14 @@ app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
       { schoolCode, studentId },
       { password: 0 }
     );
-    if (!student) return res.status(404).json({ msg: "Student not found" });
-    res.json({ student });
+    if (!student)
+      return res.status(404).json({ msg: "Student not found" });
+    res.json({
+      student: {
+        ...student._doc,
+        photo: student.photoBase64 || student.photo || ""
+      }
+    });
   } catch (err) {
     console.error("PROFILE ERROR:", err);
     res.status(500).json({ msg: "Profile load failed" });
