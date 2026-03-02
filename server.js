@@ -51,7 +51,8 @@ const StudentSchema = new mongoose.Schema({
   section: String, 
   name: String,
   password: String,
-  photo: String,   // ✅ ADD THIS
+  photo: String,  
+  photoBase64: String,   // ✅ ADD THIS
   totalScore: { type: Number, default: 0 },
   progress: { type: Number, default: 0 },   // %
   level: { type: Number, default: 1 },
@@ -990,18 +991,31 @@ app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
 app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
   try {
     const { schoolCode, studentId } = req.params;
-
     const student = await Student.findOne(
       { schoolCode, studentId },
       { password: 0 }
     );
-
     if (!student) return res.status(404).json({ msg: "Student not found" });
-
     res.json({ student });
-
   } catch (err) {
     console.error("PROFILE ERROR:", err);
+    res.status(500).json({ msg: "Profile load failed" });
+  }
+});
+/* ================= GET TEACHER PROFILE ================= */
+app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
+  try {
+    const { schoolCode, teacherId } = req.params;
+    const teacher = await Teacher.findOne(
+      { schoolCode, teacherId },
+      { password: 0 }
+    );
+    if (!teacher) {
+      return res.status(404).json({ msg: "Teacher not found" });
+    }
+    res.json({ teacher });
+  } catch (err) {
+    console.error("TEACHER PROFILE ERROR:", err);
     res.status(500).json({ msg: "Profile load failed" });
   }
 });
