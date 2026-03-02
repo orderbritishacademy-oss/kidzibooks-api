@@ -917,8 +917,9 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
           sub.schoolCode === schoolCode &&   // ✅ FILTER BY SCHOOL
           sub.teacherId === t.teacherId      // ✅ FILTER BY TEACHER
       );
-      return {
+     return {
         ...t._doc,
+        photo: t.photoBase64 || t.photo || "",
         totalSubmissions: teacherSubmissions.length
       };
     });
@@ -929,9 +930,10 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
         sub => sub.studentId === s.studentId
       );
       return {
-        ...s._doc,
-        totalExamsAttempted: studentSubs.length
-      };
+          ...s._doc,
+          photo: s.photoBase64 || s.photo || "",
+          totalExamsAttempted: studentSubs.length
+        };
     });
     res.json({
       teachers: teacherReports,
@@ -1019,7 +1021,12 @@ app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
     if (!teacher) {
       return res.status(404).json({ msg: "Teacher not found" });
     }
-    res.json({ teacher });
+    res.json({
+      teacher: {
+        ...teacher._doc,
+        photo: teacher.photoBase64 || teacher.photo || ""
+      }
+    });
   } catch (err) {
     console.error("TEACHER PROFILE ERROR:", err);
     res.status(500).json({ msg: "Profile load failed" });
