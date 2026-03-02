@@ -538,7 +538,7 @@ app.post("/api/auth/teacher-login", async (req, res) => {
   res.json({
     token,
     schoolName: school?.schoolName || "",
-    photo: teacher.photo || ""
+    photo: teacher.photo || "",
     name: teacher.name || ""   // ✅ ADD THIS
   });
 });
