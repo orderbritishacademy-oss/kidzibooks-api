@@ -772,11 +772,19 @@ app.post("/api/addSubjectChapter", async (req, res) => {
 /* ================= ADD NOTICE ================= */
 app.post("/api/addNotice", async (req, res) => {
   try {
-    const { schoolCode, class: noticeClass, section: noticeSection, title, message, date, time } = req.body;
+    const {
+      schoolCode,
+      class: noticeClass,
+      section: noticeSection,
+      title,
+      message,
+      date,
+      time
+    } = req.body;
     if (!schoolCode || !title || !message) {
       return res.json({ success: false });
     }
-    await Notice.create({
+    const newNotice = new Notice({
       schoolCode,
       class: noticeClass || "All",
       section: noticeSection || "All",
@@ -785,6 +793,7 @@ app.post("/api/addNotice", async (req, res) => {
       date,
       time
     });
+    await newNotice.save();
     res.json({ success: true });
   } catch (err) {
     console.error("ADD NOTICE ERROR:", err);
