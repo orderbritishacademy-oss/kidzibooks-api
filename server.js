@@ -1824,6 +1824,18 @@ io.on("connection", (socket) => {
       });
     }
   });
+  /* ===== STUDENT CAMERA OFF ===== */
+  socket.on("student-camera-off", ({ roomCode }) => {
+    const teacherId = teacherSockets[roomCode];
+    if (teacherId) {
+      const teacherSocket = io.sockets.sockets.get(teacherId);
+      if (teacherSocket) {
+        teacherSocket.emit("student-camera-off", {
+          studentId: socket.id
+        });
+      }
+    }
+  });
 
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
