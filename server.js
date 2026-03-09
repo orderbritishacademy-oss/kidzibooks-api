@@ -1836,7 +1836,12 @@ io.on("connection", (socket) => {
       }
     }
   });
-
+  /* ===== TEACHER CAMERA OFF ===== */
+  socket.on("teacher-camera-off", ({ roomCode }) => {
+    // send event to all students in the room
+    socket.to(roomCode).emit("teacher-camera-off");
+  });
+  
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
     for (const room in activeStudents) {
