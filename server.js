@@ -38,10 +38,8 @@ const groq = new Groq({
 const TeacherSchema = new mongoose.Schema({
   schoolCode: String,
   teacherId: String,
-  name: String,          // ✅ ADD THIS
   password: String,
-  photo: String,  // ✅ ADD THIS
-  photoBase64: String    // ✅ ADD THIS
+  photo: String   // ✅ ADD THIS
 });
 
 const StudentSchema = new mongoose.Schema({
@@ -51,8 +49,8 @@ const StudentSchema = new mongoose.Schema({
   section: String, 
   name: String,
   password: String,
-  photo: String,  
-  photoBase64: String,   // ✅ ADD THIS
+  photo: String,   // ✅ ADD THIS
+  // ✅ PERFORMANCE DATA
   totalScore: { type: Number, default: 0 },
   progress: { type: Number, default: 0 },   // %
   level: { type: Number, default: 1 },
@@ -74,7 +72,6 @@ const Student = mongoose.model("Student", StudentSchema);
 /* ================= EXAM SUBMISSION MODEL ================= */
 const ExamSubmissionSchema = new mongoose.Schema({
   schoolCode: String,
-  teacherId: String,   // ✅ ADD
   studentId: String,
   studentName: String,
   phone: String,  // 🔥 ADD THIS
@@ -416,7 +413,7 @@ app.post("/api/auth/school-login", async (req, res) => {
 
 /* ---- REGISTER TEACHER ---- */
 app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async (req, res) => {
-  let { schoolCode, teacherId, name, password } = req.body;
+  let { schoolCode, teacherId, password } = req.body;
   schoolCode = schoolCode?.trim();
   teacherId = teacherId?.trim();
   password = password?.trim();
@@ -427,19 +424,14 @@ app.post("/api/auth/register-teacher", uploadProfilePhoto.single("photo"), async
   const exists = await Teacher.findOne({ schoolCode, teacherId });
   if (exists) return res.status(400).json({ msg: "Teacher already exists" });
   // const hash = await bcrypt.hash(password, 10);
- const photoUrl = req.file
+  const photoUrl = req.file
   ? `/profile_uploads/${req.file.filename}`
   : "";
-  const photoBase64 = req.file
-    ? `data:${req.file.mimetype};base64,${fs.readFileSync(req.file.path).toString("base64")}`
-    : "";
   await Teacher.create({
     schoolCode,
     teacherId,
-    name,
     password,
-    photo: photoUrl,        // render storage
-    photoBase64: photoBase64  // 🔥 database storage
+    photo: photoUrl
   });
   res.json({ success: true });
 });
@@ -502,36 +494,35 @@ app.post("/api/auth/register-student", uploadProfilePhoto.single("photo"), async
  const photoUrl = req.file
   ? `/profile_uploads/${req.file.filename}`
   : "";
-
-  const photoBase64 = req.file
-    ? `data:${req.file.mimetype};base64,${fs.readFileSync(req.file.path).toString("base64")}`
-      : "";
-   await Student.create({
-      schoolCode,
-      studentId,
-      class: stuClass,
-      section,
-      name,
-      password,
-      photo: photoUrl,
-      photoBase64: photoBase64   // 🔥 ADD THIS
-    });
+  await Student.create({
+    schoolCode,
+    studentId,
+    class: stuClass,
+    section,
+    name,
+    password,
+    photo: photoUrl
+  });
   res.json({ success: true });
 });
 
 /* ---- TEACHER LOGIN ---- */
 app.post("/api/auth/teacher-login", async (req, res) => {
   let { schoolCode, teacherId, password } = req.body;
+
   schoolCode = schoolCode?.trim();
   teacherId = teacherId?.trim();
   password = password?.trim();
+
   const teacher = await Teacher.findOne({ schoolCode, teacherId });
   if (!teacher) return res.status(401).json({ msg: "Invalid login" });
 
   if (password !== teacher.password)
     return res.status(401).json({ msg: "Invalid login" });
+
   // ✅ ADD THIS LINE
   const school = await School.findOne({ schoolCode });
+
   const token = jwt.sign(
     {
       role: "teacher",
@@ -541,12 +532,12 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
+
   // ✅ CHANGE THIS RESPONSE
   res.json({
     token,
     schoolName: school?.schoolName || "",
-    photo: teacher.photoBase64 || teacher.photo || "",
-    name: teacher.name || ""
+    photo: teacher.photo || ""
   });
 });
 /* ---- PRINCIPAL LOGIN ---- */
@@ -631,7 +622,7 @@ app.post("/api/auth/student-login", async (req, res) => {
     class: student.class,
     section: student.section,
     schoolName: school?.schoolName || "",
-    photo: student.photoBase64 || student.photo || ""
+    photo: student.photo || ""
   });
 });
 
@@ -772,19 +763,11 @@ app.post("/api/addSubjectChapter", async (req, res) => {
 /* ================= ADD NOTICE ================= */
 app.post("/api/addNotice", async (req, res) => {
   try {
-    const {
-      schoolCode,
-      class: noticeClass,
-      section: noticeSection,
-      title,
-      message,
-      date,
-      time
-    } = req.body;
+    const { schoolCode, class: noticeClass, section: noticeSection, title, message, date, time } = req.body;
     if (!schoolCode || !title || !message) {
       return res.json({ success: false });
     }
-    const newNotice = new Notice({
+    await Notice.create({
       schoolCode,
       class: noticeClass || "All",
       section: noticeSection || "All",
@@ -793,7 +776,6 @@ app.post("/api/addNotice", async (req, res) => {
       date,
       time
     });
-    await newNotice.save();
     res.json({ success: true });
   } catch (err) {
     console.error("ADD NOTICE ERROR:", err);
@@ -922,13 +904,10 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
     // ================= TEACHER REPORT =================
     const teacherReports = teachers.map(t => {
       const teacherSubmissions = submissions.filter(
-        sub =>
-          sub.schoolCode === schoolCode &&   // ✅ FILTER BY SCHOOL
-          sub.teacherId === t.teacherId      // ✅ FILTER BY TEACHER
+        sub => sub.schoolCode === schoolCode
       );
-     return {
+      return {
         ...t._doc,
-        photo: t.photoBase64 || t.photo || "",
         totalSubmissions: teacherSubmissions.length
       };
     });
@@ -939,10 +918,9 @@ app.get("/api/principal/all-users/:schoolCode", async (req, res) => {
         sub => sub.studentId === s.studentId
       );
       return {
-          ...s._doc,
-          photo: s.photoBase64 || s.photo || "",
-          totalExamsAttempted: studentSubs.length
-        };
+        ...s._doc,
+        totalExamsAttempted: studentSubs.length
+      };
     });
     res.json({
       teachers: teacherReports,
@@ -1002,42 +980,18 @@ app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
 app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
   try {
     const { schoolCode, studentId } = req.params;
+
     const student = await Student.findOne(
       { schoolCode, studentId },
       { password: 0 }
     );
-    if (!student)
-      return res.status(404).json({ msg: "Student not found" });
-    res.json({
-      student: {
-        ...student._doc,
-        photo: student.photoBase64 || student.photo || ""
-      }
-    });
+
+    if (!student) return res.status(404).json({ msg: "Student not found" });
+
+    res.json({ student });
+
   } catch (err) {
     console.error("PROFILE ERROR:", err);
-    res.status(500).json({ msg: "Profile load failed" });
-  }
-});
-/* ================= GET TEACHER PROFILE ================= */
-app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
-  try {
-    const { schoolCode, teacherId } = req.params;
-    const teacher = await Teacher.findOne(
-      { schoolCode, teacherId },
-      { password: 0 }
-    );
-    if (!teacher) {
-      return res.status(404).json({ msg: "Teacher not found" });
-    }
-    res.json({
-      teacher: {
-        ...teacher._doc,
-        photo: teacher.photoBase64 || teacher.photo || ""
-      }
-    });
-  } catch (err) {
-    console.error("TEACHER PROFILE ERROR:", err);
     res.status(500).json({ msg: "Profile load failed" });
   }
 });
@@ -1501,7 +1455,7 @@ app.post("/api/submitExam", async (req, res) => {
       schoolCode,
       studentId,
       studentName,
-      phone,
+      phone,        // 🔥 ADD THIS
       class: stuClass,
       section,
       examId,
@@ -1513,25 +1467,17 @@ app.post("/api/submitExam", async (req, res) => {
       answers,
       result
     } = req.body;
-
-    // 🔎 FIND EXAM FROM FILE
-    const exam = allExams.find(
-      e => String(e.id) === String(examId)
-    );
-
-    if (!exam) {
-      return res.status(400).json({
-        success: false,
-        message: "Exam not found"
-      });
-    }
-
-    // 🔒 CHECK IF ALREADY SUBMITTED
+    /* 🔒 CHECK IF ALREADY SUBMITTED */
+    /* 🔒 CHECK IF ALREADY SUBMITTED (STRONG CHECK) */
     const existingSubmission = await ExamSubmission.findOne({
-      examId,
-      type: "exam",
-      $or: [{ studentId }, { phone }]
-    });
+        examId,
+        type: "exam",
+        $or: [
+          { studentId },
+          { phone }
+        ]
+      });
+
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
@@ -1539,13 +1485,12 @@ app.post("/api/submitExam", async (req, res) => {
       });
     }
 
-    // ✅ CREATE SUBMISSION
+    /* ✅ CREATE NEW SUBMISSION */
     const submission = await ExamSubmission.create({
       schoolCode,
-      teacherId: exam?.teacherId || "unknown",
       studentId,
       studentName,
-      phone,
+      phone,              // 🔥 ADD THIS
       class: stuClass,
       section,
       examId,
@@ -1556,7 +1501,7 @@ app.post("/api/submitExam", async (req, res) => {
       questions,
       answers,
       result,
-      submittedAt: new Date()
+      submittedAt: new Date()   // 🔥 ADD THIS ALSO
     });
     console.log("✅ Exam submitted:", submission._id);
     res.json({ success: true });
@@ -1583,14 +1528,15 @@ app.get("/api/student-submissions/:studentId", async (req, res) => {
 });
 
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
-app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
+app.get("/api/teacher/submissions/:schoolCode", async (req, res) => {
   try {
-    const { schoolCode } = req.params;
-    const { teacherId } = req.user;   // ✅ from token
+
     const submissions = await ExamSubmission
-      .find({ schoolCode, teacherId })   // ✅ FILTER HERE
+      .find({ schoolCode: req.params.schoolCode })
       .sort({ submittedAt: -1 });
+
     res.json(submissions);
+
   } catch (err) {
     console.error("GET SUBMISSIONS ERROR:", err);
     res.json([]);
@@ -1833,24 +1779,7 @@ io.on("connection", (socket) => {
       });
     }
   });
-  /* ===== STUDENT CAMERA OFF ===== */
-  socket.on("student-camera-off", ({ roomCode }) => {
-    const teacherId = teacherSockets[roomCode];
-    if (teacherId) {
-      const teacherSocket = io.sockets.sockets.get(teacherId);
-      if (teacherSocket) {
-        teacherSocket.emit("student-camera-off", {
-          studentId: socket.id
-        });
-      }
-    }
-  });
-  /* ===== TEACHER CAMERA OFF ===== */
-  socket.on("teacher-camera-off", ({ roomCode }) => {
-    // send event to all students in the room
-    socket.to(roomCode).emit("teacher-camera-off");
-  });
-  
+
   // ✅ AUTO REMOVE STUDENT WHEN DISCONNECT
   socket.on("disconnect", () => {
     for (const room in activeStudents) {
