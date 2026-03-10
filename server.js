@@ -1542,7 +1542,7 @@ app.post("/api/submitExam", async (req, res) => {
     // ✅ CREATE SUBMISSION
     const submission = await ExamSubmission.create({
       schoolCode,
-      teacherId: exam.teacherId || null,   // ✅ FIXED
+      teacherId: exam?.teacherId || "unknown",
       studentId,
       studentName,
       phone,
