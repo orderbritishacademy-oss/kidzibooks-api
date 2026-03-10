@@ -1516,7 +1516,7 @@ app.post("/api/submitExam", async (req, res) => {
 
     // 🔎 FIND EXAM FROM FILE
     const exam = allExams.find(
-      e => String(e.id) === String(examId)
+      e => Number(e.id) === Number(examId)
     );
 
     if (!exam) {
@@ -1527,12 +1527,12 @@ app.post("/api/submitExam", async (req, res) => {
     }
 
     // 🔒 CHECK IF ALREADY SUBMITTED
-    const existingSubmission = await ExamSubmission.findOne({
-      examId,
-      studentId,
-      phone,
-      type: "exam"
-    });
+    // const existingSubmission = await ExamSubmission.findOne({
+    //   examId,
+    //   studentId,
+    //   phone,
+    //   type: "exam"
+    // });
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
@@ -1549,7 +1549,7 @@ app.post("/api/submitExam", async (req, res) => {
     // ✅ CREATE SUBMISSION
     const submission = await ExamSubmission.create({
       schoolCode,
-      teacherId: exam.teacherId,
+      teacherId: exam.teacherId || "",
       studentId,
       studentName,
       phone,
@@ -1595,7 +1595,10 @@ app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) =>
     const { schoolCode } = req.params;
     const { teacherId } = req.user;   // ✅ from token
     const submissions = await ExamSubmission
-      .find({ schoolCode, teacherId })   // ✅ FILTER HERE
+      .find({
+        schoolCode: schoolCode,
+        teacherId: teacherId
+      })
       .sort({ submittedAt: -1 });
     res.json(submissions);
   } catch (err) {
