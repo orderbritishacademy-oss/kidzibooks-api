@@ -1529,13 +1529,20 @@ app.post("/api/submitExam", async (req, res) => {
     // 🔒 CHECK IF ALREADY SUBMITTED
     const existingSubmission = await ExamSubmission.findOne({
       examId,
-      type: "exam",
-      $or: [{ studentId }, { phone }]
+      studentId,
+      phone,
+      type: "exam"
     });
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
         message: "Exam already solved by this student"
+      });
+    }
+    if (!studentId && !phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Student identification missing"
       });
     }
 
