@@ -382,7 +382,6 @@ app.post("/api/auth/register-school", async (req, res) => {
 app.post("/api/auth/school-login", async (req, res) => {
   try {
     let { schoolCode, adminPassword } = req.body;
-
     schoolCode = schoolCode?.trim();
     adminPassword = adminPassword?.trim();
 
@@ -391,7 +390,6 @@ app.post("/api/auth/school-login", async (req, res) => {
 
     const school = await School.findOne({ schoolCode });
     if (!school) return res.status(401).json({ msg: "Invalid school code" });
-
     // const ok = await bcrypt.compare(adminPassword, school.adminPassword);
     if (adminPassword !== school.adminPassword)
       return res.status(401).json({ msg: "Wrong password" });
@@ -401,16 +399,35 @@ app.post("/api/auth/school-login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-
     res.json({
       token,
       schoolName: school.schoolName
     });
-
-
   } catch (e) {
     console.error(e);
     res.status(500).json({ msg: "School login failed" });
+  }
+});
+/* ================= DEVELOPER LOGIN ================= */
+app.post("/api/auth/developer-login", (req, res) => {
+  try {
+    const { devId, devPass } = req.body;
+
+    const DEV_ID = process.env.DEV_ID;
+    const DEV_PASS = process.env.DEV_PASS;
+
+    if (devId !== DEV_ID || devPass !== DEV_PASS) {
+      return res.status(401).json({ msg: "Invalid developer login" });
+    }
+    const token = jwt.sign(
+      { role: "developer" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.json({ token });
+  } catch (err) {
+    console.error("DEV LOGIN ERROR:", err);
+    res.status(500).json({ msg: "Developer login failed" });
   }
 });
 
