@@ -1559,23 +1559,16 @@ app.post("/api/submitExam", async (req, res) => {
         e => String(e.id) === String(examId)
       );
     // ⭐ CHECK EXAM TIME
-    if (exam.examDate && exam.startTime && exam.endTime) {
-      const now = new Date();
-      const start = new Date(`${exam.examDate}T${exam.startTime}`);
-      const end = new Date(`${exam.examDate}T${exam.endTime}`);
-      if (now < start) {
-        return res.json({
-          success:false,
-          message:"Exam has not started yet"
-        });
+   // ⭐ Only check if exam ended
+      if (exam.examDate && exam.endTime) {
+      
+        const now = new Date();
+        const end = new Date(`${exam.examDate}T${exam.endTime}`);
+      
+        if (now > end) {
+          console.log("⏰ Exam time ended but allowing submission");
+        }
       }
-      if (now > end) {
-        return res.json({
-          success:false,
-          message:"Exam time is over"
-        });
-      }
-    }
 // ======================================
     if (!exam) {
       return res.status(400).json({
