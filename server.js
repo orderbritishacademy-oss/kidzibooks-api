@@ -1547,25 +1547,28 @@ app.post("/api/submitExam", async (req, res) => {
       answers,
       result
     } = req.body;
-
+    /* ⭐ ADD THIS BLOCK */
+    if (!answers || Object.keys(answers).length === 0) {
+      console.log("⚠ Empty answers detected (auto submission)");
+    }
     // 🔎 FIND EXAM FROM FILE
+    // const exam = allExams.find(
+    //   e => Number(e.id) === Number(examId)
+    // );
     const exam = allExams.find(
-      e => Number(e.id) === Number(examId)
-    );
+        e => String(e.id) === String(examId)
+      );
     // ⭐ CHECK EXAM TIME
     if (exam.examDate && exam.startTime && exam.endTime) {
-  
       const now = new Date();
       const start = new Date(`${exam.examDate}T${exam.startTime}`);
       const end = new Date(`${exam.examDate}T${exam.endTime}`);
-    
       if (now < start) {
         return res.json({
           success:false,
           message:"Exam has not started yet"
         });
       }
-    
       if (now > end) {
         return res.json({
           success:false,
@@ -1648,13 +1651,12 @@ app.get("/api/student-submissions/:studentId", async (req, res) => {
 app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
   try {
     const { schoolCode } = req.params;
-    const { teacherId } = req.user;   // ✅ from token
-    const submissions = await ExamSubmission
-      .find({
-        schoolCode: schoolCode,
-        teacherId: teacherId
-      })
-      .sort({ submittedAt: -1 });
+    const { teacherId } = req.user;
+    const submissions = await ExamSubmission.find({
+      schoolCode: schoolCode,
+      teacherId: teacherId,
+      type: "exam"   // ⭐ ADD THIS
+    }).sort({ submittedAt: -1 });
     res.json(submissions);
   } catch (err) {
     console.error("GET SUBMISSIONS ERROR:", err);
