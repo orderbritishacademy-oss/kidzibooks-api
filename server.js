@@ -1441,13 +1441,13 @@ app.get("/api/exams", verifyToken, (req, res) => {
     if (role === "student") {
       if (exam.type !== "exam") return false;
 
-      if (exam.examDate && exam.startTime && exam.endTime) {
-        const start = new Date(`${exam.examDate}T${exam.startTime}`);
-        const end = new Date(`${exam.examDate}T${exam.endTime}`);
+      // if (exam.examDate && exam.startTime && exam.endTime) {
+      //   const start = new Date(`${exam.examDate}T${exam.startTime}`);
+      //   const end = new Date(`${exam.examDate}T${exam.endTime}`);
 
-        if (now < start) return false;
-        if (now > end) return false;
-      }
+      //   if (now < start) return false;
+      //   if (now > end) return false;
+      // }
       return true;
     }
     return true;
