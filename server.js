@@ -1395,14 +1395,21 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
     const newExam = {
       id: Date.now(),
       schoolCode: req.user.schoolCode,
-      teacherId: req.user.teacherId,   // ✅ ADD THIS
+      teacherId: req.user.teacherId,
     
       name: req.file.originalname,
       url: fileUrl,
+    
       class: meta.class,
       subject: meta.subject,
       chapter: meta.chapter,
       type: meta.type || "worksheet",
+    
+      // ⭐ ADD THESE 3 LINES
+      examDate: meta.examDate || "",
+      startTime: meta.startTime || "",
+      endTime: meta.endTime || "",
+    
       questions: fixedQuestions,
       answers: meta.answers || {},
       pageImages: meta.pageImages || []
@@ -1421,20 +1428,22 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 app.get("/api/exams", verifyToken, (req, res) => {
   const { schoolCode, role, teacherId } = req.user;
-  let filtered = [];
-  if (role === "teacher") {
-    // ✅ Teacher sees only their own uploads
-    filtered = allExams.filter(
-      exam =>
-        exam.schoolCode === schoolCode &&
-        exam.teacherId === teacherId
-    );
-  } else {
-    // ✅ Students see all exams of school
-    filtered = allExams.filter(
-      exam => exam.schoolCode === schoolCode
-    );
-  }
+  const now = new Date();
+  let filtered = allExams.filter(exam => {
+    if (exam.schoolCode !== schoolCode) return false;
+    // ⭐ TIME CHECK
+    if (exam.examDate && exam.startTime && exam.endTime) {
+      const start = new Date(`${exam.examDate}T${exam.startTime}`);
+      const end = new Date(`${exam.examDate}T${exam.endTime}`);
+
+      if (now < start) return false;   // exam not started
+      if (now > end) return false;     // exam ended
+    }
+    if (role === "teacher") {
+      return exam.teacherId === teacherId;
+    }
+    return true;
+  });
   res.json(filtered);
 });
 /* ================= GET QUIZ BY ID ================= */
@@ -1535,7 +1544,28 @@ app.post("/api/submitExam", async (req, res) => {
     const exam = allExams.find(
       e => Number(e.id) === Number(examId)
     );
-
+    // ⭐ CHECK EXAM TIME
+    if (exam.examDate && exam.startTime && exam.endTime) {
+  
+      const now = new Date();
+      const start = new Date(`${exam.examDate}T${exam.startTime}`);
+      const end = new Date(`${exam.examDate}T${exam.endTime}`);
+    
+      if (now < start) {
+        return res.json({
+          success:false,
+          message:"Exam has not started yet"
+        });
+      }
+    
+      if (now > end) {
+        return res.json({
+          success:false,
+          message:"Exam time is over"
+        });
+      }
+    }
+// ======================================
     if (!exam) {
       return res.status(400).json({
         success: false,
