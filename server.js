@@ -1432,18 +1432,23 @@ app.get("/api/exams", verifyToken, (req, res) => {
 
   const filtered = allExams.filter(exam => {
     if (exam.schoolCode !== schoolCode) return false;
-    // ✅ TEACHER should always see exams
+    // ✅ TEACHER sees only their exams
     if (role === "teacher") {
       return exam.teacherId === teacherId;
     }
-    // ✅ STUDENT time check
-    if (exam.examDate && exam.startTime && exam.endTime) {
 
-      const start = new Date(`${exam.examDate}T${exam.startTime}`);
-      const end = new Date(`${exam.examDate}T${exam.endTime}`);
+    // ✅ STUDENT sees only exam type
+    if (role === "student") {
+      if (exam.type !== "exam") return false;
 
-      if (now < start) return false;
-      if (now > end) return false;
+      if (exam.examDate && exam.startTime && exam.endTime) {
+        const start = new Date(`${exam.examDate}T${exam.startTime}`);
+        const end = new Date(`${exam.examDate}T${exam.endTime}`);
+
+        if (now < start) return false;
+        if (now > end) return false;
+      }
+      return true;
     }
     return true;
   });
