@@ -1429,18 +1429,21 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
 app.get("/api/exams", verifyToken, (req, res) => {
   const { schoolCode, role, teacherId } = req.user;
   const now = new Date();
-  let filtered = allExams.filter(exam => {
+
+  const filtered = allExams.filter(exam => {
     if (exam.schoolCode !== schoolCode) return false;
-    // ⭐ TIME CHECK
+    // ✅ TEACHER should always see exams
+    if (role === "teacher") {
+      return exam.teacherId === teacherId;
+    }
+    // ✅ STUDENT time check
     if (exam.examDate && exam.startTime && exam.endTime) {
+
       const start = new Date(`${exam.examDate}T${exam.startTime}`);
       const end = new Date(`${exam.examDate}T${exam.endTime}`);
 
-      if (now < start) return false;   // exam not started
-      if (now > end) return false;     // exam ended
-    }
-    if (role === "teacher") {
-      return exam.teacherId === teacherId;
+      if (now < start) return false;
+      if (now > end) return false;
     }
     return true;
   });
@@ -1574,12 +1577,12 @@ app.post("/api/submitExam", async (req, res) => {
     }
 
     // 🔒 CHECK IF ALREADY SUBMITTED
-    // const existingSubmission = await ExamSubmission.findOne({
-    //   examId,
-    //   studentId,
-    //   phone,
-    //   type: "exam"
-    // });
+    const existingSubmission = await ExamSubmission.findOne({
+      examId,
+      studentId,
+      phone,
+      // type: "exam"
+    });
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
