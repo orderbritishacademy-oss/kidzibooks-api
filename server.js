@@ -1436,20 +1436,16 @@ app.get("/api/exams", verifyToken, (req, res) => {
     if (role === "teacher") {
       return exam.teacherId === teacherId;
     }
-
     // ✅ STUDENT sees only exam type
     if (role === "student") {
-      if (exam.type !== "exam") return false;
-
-      // if (exam.examDate && exam.startTime && exam.endTime) {
-      //   const start = new Date(`${exam.examDate}T${exam.startTime}`);
-      //   const end = new Date(`${exam.examDate}T${exam.endTime}`);
-
-      //   if (now < start) return false;
-      //   if (now > end) return false;
-      // }
+    // ✅ Allow worksheets for students
+    if (exam.type === "worksheet") {
       return true;
     }
+    // existing exam logic
+    if (exam.type !== "exam") return false;
+    return true;
+  }
     return true;
   });
   res.json(filtered);
