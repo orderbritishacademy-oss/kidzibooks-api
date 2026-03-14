@@ -1625,21 +1625,20 @@ app.post("/api/submitExam", async (req, res) => {
 });
 
 /* ================= STUDENT GET OWN SUBMISSIONS ================= */
-app.get("/api/student-submissions/:studentId", async (req, res) => {
-  try {
-    const submissions = await ExamSubmission.find({
-      studentId: req.params.studentId,
-      type: "exam"
+    app.get("/api/student-submissions/:schoolCode/:studentId", async (req, res) => {
+      try {
+        const { schoolCode, studentId } = req.params;
+        const submissions = await ExamSubmission.find({
+          schoolCode,
+          studentId
+        }).sort({ submittedAt: -1 });
+        res.json(submissions);
+    
+      } catch (err) {
+        console.error("GET STUDENT SUBMISSIONS ERROR:", err);
+        res.json([]);
+      }
     });
-
-    res.json(submissions);
-
-  } catch (err) {
-    console.error("GET STUDENT SUBMISSIONS ERROR:", err);
-    res.json([]);
-  }
-});
-
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
 app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
   try {
