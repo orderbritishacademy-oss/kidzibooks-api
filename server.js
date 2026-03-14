@@ -1636,21 +1636,21 @@ app.post("/api/submitExam", async (req, res) => {
       }
     });
 /* ================= TEACHER GET SUBMITTED EXAMS ================= */
-app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
-  try {
-    const { schoolCode } = req.params;
-    const { teacherId } = req.user;
-    const submissions = await ExamSubmission.find({
-      schoolCode: schoolCode,
-      teacherId: teacherId,
-      type: "exam"   // ⭐ ADD THIS
-    }).sort({ submittedAt: -1 });
-    res.json(submissions);
-  } catch (err) {
-    console.error("GET SUBMISSIONS ERROR:", err);
-    res.json([]);
-  }
-});
+  app.get("/api/teacher/submissions/:schoolCode", verifyToken, async (req, res) => {
+    try {
+      const { schoolCode } = req.params;
+      const { teacherId } = req.user;
+      const submissions = await ExamSubmission.find({
+        schoolCode: schoolCode,
+        teacherId: teacherId
+      }).sort({ submittedAt: -1 });
+  
+      res.json(submissions);
+    } catch (err) {
+      console.error("GET SUBMISSIONS ERROR:", err);
+      res.json([]);
+    }
+  });
 /* ================= DELETE SUBMISSION ================= */
 app.delete("/api/deleteSubmission/:id", async (req, res) => {
   try {
