@@ -1426,40 +1426,62 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
 });
 
 /* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
+/* ================= ✅ STUDENT GET SCHOOL EXAM ================= */
 app.get("/api/exams", verifyToken, (req, res) => {
   const { schoolCode, role, teacherId } = req.user;
   const now = new Date();
 
   const filtered = allExams.filter(exam => {
+    // ❌ Different school
     if (exam.schoolCode !== schoolCode) return false;
-    // ✅ TEACHER sees only their exams
+    /* ================= TEACHER VIEW ================= */
     if (role === "teacher") {
+      // teacher sees only their exams
       return exam.teacherId === teacherId;
     }
-
-    // ✅ STUDENT sees only exam type
+    /* ================= STUDENT VIEW ================= */
     if (role === "student") {
-  // Worksheet → always visible
-    if (exam.type === "worksheet") {
-      return true;
-    }
-    // Exam → show only during exam time
-    if (exam.type === "exam") {
-      if (exam.examDate && exam.startTime && exam.endTime) {
-        const start = new Date(`${exam.examDate}T${exam.startTime}`);
-        const end = new Date(`${exam.examDate}T${exam.endTime}`);
-  
-        if (now < start) return false;
-        if (now > end) return false;
+      /* ---------- Worksheet ---------- */
+      if (exam.type === "worksheet") {
+        return true;
       }
 
-      return true;
+      /* ---------- Exam ---------- */
+      if (exam.type === "exam") {
+        /* ⭐ ADD STATUS (DO NOT REMOVE EXAM) */
+        exam.status = "active";
+        if (exam.examDate && exam.startTime) {
+          const start = new Date(`${exam.examDate}T${exam.startTime}`);
+          if (now < start) {
+            exam.status = "upcoming";
+          }
+        }
+
+        if (exam.examDate && exam.endTime) {
+          const end = new Date(`${exam.examDate}T${exam.endTime}`);
+          if (now > end) {
+            exam.status = "expired";
+          }
+        }
+
+        /* ================= ORIGINAL LOGIC ================= */
+        // Only hide exam if both start and end exist
+        if (exam.examDate && exam.startTime && exam.endTime) {
+
+          const start = new Date(`${exam.examDate}T${exam.startTime}`);
+          const end = new Date(`${exam.examDate}T${exam.endTime}`);
+
+          if (now < start) return false;
+          if (now > end) return false;
+        }
+        return true;
+      }
     }
-  }
-      return true;
+    return true;
   });
   res.json(filtered);
 });
+
 /* ================= GET QUIZ BY ID ================= */
 app.get("/api/exam/:id", async (req, res) => {
   try {
