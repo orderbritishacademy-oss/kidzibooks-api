@@ -1431,11 +1431,15 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
     const pdfAnswers =
       await extractAnswersFromPDF(req.file.path, fixedQuestions);
     
-    const finalAnswers =
+    const rawAnswers =
       Object.keys(pdfAnswers).length > 0
         ? pdfAnswers
         : meta.answers || {};
     
+    const finalAnswers = Object.fromEntries(
+      Object.entries(rawAnswers).map(([k, v]) => [Number(k), Number(v)])
+    );
+        
     const newExam = {
       id: Date.now(),
       schoolCode: req.user.schoolCode,
