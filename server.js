@@ -193,7 +193,7 @@ const extractAnswersFromPDF = async (filePath, questions) => {
     const answerSection = text.slice(keyIndex);
     const lines = answerSection.split("\n");
     lines.forEach(line => {
-      const match = line.match(/(\d+)[\.\)]?\s*([a-d1-4])/i);
+      const match = line.match(/(\d+)[\.\)]?\s*([a-d1-4])\)?/i);
       if (!match) return;
       const qIndex = parseInt(match[1]) - 1;
       const val = match[2].toUpperCase();
