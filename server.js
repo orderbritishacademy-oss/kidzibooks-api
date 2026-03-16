@@ -9,7 +9,6 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const pdfParse = require("pdf-parse");
 // const pdf = require("pdf-poppler");
 
 /* ✅ AUTH + DB */
@@ -177,37 +176,6 @@ const ClassroomSchema = new mongoose.Schema({
 });
 const Classroom = mongoose.model("Classroom", ClassroomSchema);
 
-/* ==================================================================== extractAnswersFromPDF MODEL ================= */
-const extractAnswersFromPDF = async (filePath) => {
-  try {
-    const buffer = fs.readFileSync(filePath);
-    const data = await pdfParse(buffer);
-    const text = data.text;
-
-    const answers = {};
-    // Detect formats like:
-    // 1. C
-    // 1) B
-    // 1 - A
-    // 1 Ans: C
-    const regex = /(\d+)\s*[\.\)\-]?\s*(?:ans|answer)?[:\-\s]*\(?([A-D])\)?/gi;
-    let match;
-    
-    while ((match = regex.exec(text)) !== null) {
-      const qIndex = Number(match[1]) - 1;
-      const letter = match[2].toUpperCase();
-      const map = { A: 0, B: 1, C: 2, D: 3 };
-      if (map[letter] !== undefined) {
-        answers[qIndex] = map[letter];
-      }
-    }
-    console.log("✅ Extracted Answers:", answers);
-    return answers;
-  } catch (err) {
-    console.log("❌ PDF parse failed:", err);
-    return {};
-  }
-};
 /* ================= EXAM DATA FILE ================= */
 const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
@@ -301,8 +269,7 @@ const profileStorage = multer.diskStorage({
 const uploadProfilePhoto = multer({ storage: profileStorage });
 app.use("/profile_uploads", express.static(profileUploadDir));
 
-
-/* ================================================= TEST ================= */
+/* ================= TEST ================= */
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
@@ -1402,8 +1369,10 @@ const verifyToken = (req, res, next) => {
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
 app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req, res) => {
   try {
+
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
+
     // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
     const fixedQuestions = (meta.questions || []).map(q => ({
       question: q.question || "",
@@ -1422,18 +1391,7 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
         };
       })
     }));
-    const pdfAnswers =
-      await extractAnswersFromPDF(req.file.path, fixedQuestions);
-    
-    const rawAnswers =
-      Object.keys(pdfAnswers).length > 0
-        ? pdfAnswers
-        : meta.answers || {};
-    
-    const finalAnswers = Object.fromEntries(
-      Object.entries(rawAnswers).map(([k, v]) => [Number(k), Number(v)])
-    );
-        
+
     const newExam = {
       id: Date.now(),
       schoolCode: req.user.schoolCode,
@@ -1453,8 +1411,7 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
       endTime: meta.endTime || "",
     
       questions: fixedQuestions,
-      // answers: meta.answers || {},
-      answers: finalAnswers,
+      answers: meta.answers || {},
       pageImages: meta.pageImages || []
     };
 
