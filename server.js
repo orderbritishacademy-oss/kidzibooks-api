@@ -177,46 +177,42 @@ const ClassroomSchema = new mongoose.Schema({
 });
 const Classroom = mongoose.model("Classroom", ClassroomSchema);
 
-/* ================= extractAnswersFromPDF MODEL ================= */
+/* ==================================================================== extractAnswersFromPDF MODEL ================= */
 const extractAnswersFromPDF = async (filePath, questions) => {
-  const buffer = fs.readFileSync(filePath);
-  const data = await pdfParse(buffer);
-  const text = data.text.toLowerCase();
-  const answers = {};
-  const lines = text.split("\n");
-  lines.forEach(line => {
-    const match = line.match(/(\d+)[\.\)]?\s*(.*)/);
-    if (!match) return;
-    const qIndex = parseInt(match[1]) - 1;
-    let ans = match[2].trim();
-    if (!ans) return;
-    // A B C D format
-    if (/^[a-d]/i.test(ans)) {
-      const letter = ans[0].toUpperCase();
-      answers[qIndex] = {A:0,B:1,C:2,D:3}[letter];
-      return;
+  try {
+    const buffer = fs.readFileSync(filePath);
+    const data = await pdfParse(buffer);
+    let text = data.text.toLowerCase();
+    const answers = {};
+    /* ⭐ ONLY READ AFTER "ANSWER KEY" */
+    const keyIndex = text.indexOf("answer key");
+    if (keyIndex === -1) {
+      console.log("No Answer Key found in PDF");
+      return {};
     }
-    // 1 2 3 4 format
-    if (/^[1-4]/.test(ans)) {
-      answers[qIndex] = parseInt(ans[0]) - 1;
-      return;
-    }
-    // Text matching format
-    if (questions && questions[qIndex]) {
-      const opts = questions[qIndex].options || [];
-      opts.forEach((opt,i)=>{
-        const textOpt =
-          typeof opt === "string"
-          ? opt.toLowerCase()
-          : opt.text?.toLowerCase();
+    const answerSection = text.slice(keyIndex);
+    const lines = answerSection.split("\n");
+    lines.forEach(line => {
+      const match = line.match(/(\d+)[\.\)]?\s*([a-d1-4])/i);
+      if (!match) return;
+      const qIndex = parseInt(match[1]) - 1;
+      const val = match[2].toUpperCase();
+      /* A B C D */
+      if (["A","B","C","D"].includes(val)) {
+        answers[qIndex] = {A:0,B:1,C:2,D:3}[val];
+      }
+      /* 1 2 3 4 */
+      if (["1","2","3","4"].includes(val)) {
+        answers[qIndex] = parseInt(val) - 1;
+      }
+    });
+    console.log("Extracted answers:", answers);
+    return answers;
 
-        if (textOpt && ans.includes(textOpt.slice(0,10))) {
-          answers[qIndex] = i;
-        }
-      });
-    }
-  });
-  return answers;
+  } catch (err) {
+    console.log("PDF parse failed:", err);
+    return {};
+  }
 };
 /* ================= EXAM DATA FILE ================= */
 const dataDir = path.join(__dirname, "data");
