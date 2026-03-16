@@ -182,25 +182,24 @@ const extractAnswersFromPDF = async (filePath) => {
   try {
     const buffer = fs.readFileSync(filePath);
     const data = await pdfParse(buffer);
-    const text = data.text.toLowerCase();
+    const text = data.text;
+
     const answers = {};
+    const regex = /(\d+)[\.\)]?\s*(?:ans|answer)?[:\-]?\s*\(?([A-D1-4])\)?/gi;
 
-    const lines = text.split("\n");
-
-    lines.forEach(line => {
-      const match = line.match(/(\d+)[\.\)]?\s*([a-d1-4])\)?/i);
-      if (!match) return;
-      const qIndex = parseInt(match[1]) - 1;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const qIndex = Number(match[1]) - 1;
       const val = match[2].toUpperCase();
 
       if (["A","B","C","D"].includes(val)) {
         answers[qIndex] = {A:0,B:1,C:2,D:3}[val];
       }
       if (["1","2","3","4"].includes(val)) {
-        answers[qIndex] = parseInt(val) - 1;
+        answers[qIndex] = Number(val) - 1;
       }
-    });
-    console.log("PDF Answers Extracted:", answers);
+    }
+    console.log("✅ PDF Answers Extracted:", answers);
     return answers;
 
   } catch (err) {
