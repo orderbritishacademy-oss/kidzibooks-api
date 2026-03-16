@@ -9,6 +9,7 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const pdfParse = require("pdf-parse");
 // const pdf = require("pdf-poppler");
 
 /* ✅ AUTH + DB */
@@ -176,6 +177,47 @@ const ClassroomSchema = new mongoose.Schema({
 });
 const Classroom = mongoose.model("Classroom", ClassroomSchema);
 
+/* ================= extractAnswersFromPDF MODEL ================= */
+const extractAnswersFromPDF = async (filePath, questions) => {
+  const buffer = fs.readFileSync(filePath);
+  const data = await pdfParse(buffer);
+  const text = data.text.toLowerCase();
+  const answers = {};
+  const lines = text.split("\n");
+  lines.forEach(line => {
+    const match = line.match(/(\d+)[\.\)]?\s*(.*)/);
+    if (!match) return;
+    const qIndex = parseInt(match[1]) - 1;
+    let ans = match[2].trim();
+    if (!ans) return;
+    // A B C D format
+    if (/^[a-d]/i.test(ans)) {
+      const letter = ans[0].toUpperCase();
+      answers[qIndex] = {A:0,B:1,C:2,D:3}[letter];
+      return;
+    }
+    // 1 2 3 4 format
+    if (/^[1-4]/.test(ans)) {
+      answers[qIndex] = parseInt(ans[0]) - 1;
+      return;
+    }
+    // Text matching format
+    if (questions && questions[qIndex]) {
+      const opts = questions[qIndex].options || [];
+      opts.forEach((opt,i)=>{
+        const textOpt =
+          typeof opt === "string"
+          ? opt.toLowerCase()
+          : opt.text?.toLowerCase();
+
+        if (textOpt && ans.includes(textOpt.slice(0,10))) {
+          answers[qIndex] = i;
+        }
+      });
+    }
+  });
+  return answers;
+};
 /* ================= EXAM DATA FILE ================= */
 const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
@@ -269,7 +311,8 @@ const profileStorage = multer.diskStorage({
 const uploadProfilePhoto = multer({ storage: profileStorage });
 app.use("/profile_uploads", express.static(profileUploadDir));
 
-/* ================= TEST ================= */
+
+/* ================================================= TEST ================= */
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
 });
@@ -1369,10 +1412,8 @@ const verifyToken = (req, res, next) => {
 /* ================= ✅ SCHOOL TEACHER UPLOAD PDF ================= */
 app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req, res) => {
   try {
-
     const fileUrl = `/exam_uploads/${req.file.filename}`;
     const meta = JSON.parse(req.body.meta || "{}");
-
     // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
     const fixedQuestions = (meta.questions || []).map(q => ({
       question: q.question || "",
@@ -1391,7 +1432,14 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
         };
       })
     }));
-
+    const pdfAnswers =
+      await extractAnswersFromPDF(req.file.path, fixedQuestions);
+    
+    const finalAnswers =
+      Object.keys(pdfAnswers).length > 0
+        ? pdfAnswers
+        : meta.answers || {};
+    
     const newExam = {
       id: Date.now(),
       schoolCode: req.user.schoolCode,
@@ -1411,7 +1459,8 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
       endTime: meta.endTime || "",
     
       questions: fixedQuestions,
-      answers: meta.answers || {},
+      // answers: meta.answers || {},
+      answers: finalAnswers,
       pageImages: meta.pageImages || []
     };
 
