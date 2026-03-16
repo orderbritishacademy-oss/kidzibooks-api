@@ -178,35 +178,29 @@ const ClassroomSchema = new mongoose.Schema({
 const Classroom = mongoose.model("Classroom", ClassroomSchema);
 
 /* ==================================================================== extractAnswersFromPDF MODEL ================= */
-const extractAnswersFromPDF = async (filePath, questions) => {
+const extractAnswersFromPDF = async (filePath) => {
   try {
     const buffer = fs.readFileSync(filePath);
     const data = await pdfParse(buffer);
-    let text = data.text.toLowerCase();
+    const text = data.text.toLowerCase();
     const answers = {};
-    /* ⭐ ONLY READ AFTER "ANSWER KEY" */
-    const keyIndex = text.indexOf("answer key");
-    if (keyIndex === -1) {
-      console.log("No Answer Key found in PDF");
-      return {};
-    }
-    const answerSection = text.slice(keyIndex);
-    const lines = answerSection.split("\n");
+    const lines = text.split("\n");
     lines.forEach(line => {
       const match = line.match(/(\d+)[\.\)]?\s*([a-d1-4])\)?/i);
       if (!match) return;
+
       const qIndex = parseInt(match[1]) - 1;
-      const val = match[2].toUpperCase();
-      /* A B C D */
-      if (["A","B","C","D"].includes(val)) {
-        answers[qIndex] = {A:0,B:1,C:2,D:3}[val];
+      const value = match[2].toUpperCase();
+      // A B C D
+      if (["A","B","C","D"].includes(value)) {
+        answers[qIndex] = {A:0,B:1,C:2,D:3}[value];
       }
-      /* 1 2 3 4 */
-      if (["1","2","3","4"].includes(val)) {
-        answers[qIndex] = parseInt(val) - 1;
+      // 1 2 3 4
+      if (["1","2","3","4"].includes(value)) {
+        answers[qIndex] = parseInt(value) - 1;
       }
     });
-    console.log("Extracted answers:", answers);
+    console.log("Extracted PDF answers:", answers);
     return answers;
 
   } catch (err) {
