@@ -185,25 +185,26 @@ const extractAnswersFromPDF = async (filePath) => {
     const text = data.text;
 
     const answers = {};
-    const regex = /(\d+)[\.\)]?\s*(?:ans|answer)?[:\-]?\s*\(?([A-D1-4])\)?/gi;
-
+    // Detect formats like:
+    // 1. C
+    // 1) B
+    // 1 - A
+    // 1 Ans: C
+    const regex = /(\d+)\s*[\.\)\-]?\s*(?:ans|answer)?[:\-\s]*\(?([A-D])\)?/gi;
     let match;
+    
     while ((match = regex.exec(text)) !== null) {
       const qIndex = Number(match[1]) - 1;
-      const val = match[2].toUpperCase();
-
-      if (["A","B","C","D"].includes(val)) {
-        answers[qIndex] = {A:0,B:1,C:2,D:3}[val];
-      }
-      if (["1","2","3","4"].includes(val)) {
-        answers[qIndex] = Number(val) - 1;
+      const letter = match[2].toUpperCase();
+      const map = { A: 0, B: 1, C: 2, D: 3 };
+      if (map[letter] !== undefined) {
+        answers[qIndex] = map[letter];
       }
     }
-    console.log("✅ PDF Answers Extracted:", answers);
+    console.log("✅ Extracted Answers:", answers);
     return answers;
-
   } catch (err) {
-    console.log("PDF parse failed:", err);
+    console.log("❌ PDF parse failed:", err);
     return {};
   }
 };
