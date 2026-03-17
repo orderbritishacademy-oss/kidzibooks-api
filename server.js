@@ -59,8 +59,8 @@ const StudentSchema = new mongoose.Schema({
   isOnline: { type: Boolean, default: false },
   lastActive: { type: Date }
 });
-
 const Teacher = mongoose.model("Teacher", TeacherSchema);
+
 /* ================= PRINCIPAL MODEL ================= */
 const PrincipalSchema = new mongoose.Schema({
   schoolCode: { type: String, required: true, unique: true }, // ✅ only 1 per school
@@ -105,6 +105,7 @@ const ExamSubmission = mongoose.model("ExamSubmission", ExamSubmissionSchema);
 const QuizSchema = new mongoose.Schema({
   name: String,
   description: String,
+  teacherId: String,   // ✅ ADD
   questions: Array,
   createdAt: {
     type: Date,
@@ -277,12 +278,13 @@ app.get("/", (req, res) => {
 /* ================= CREATE QUIZ (LINK EXAM) ================= */
 app.post("/api/createQuiz", async (req, res) => {
   try {
-    const { name, description, questions } = req.body;
+    const { name, description, questions, teacherId } = req.body;
     if (!name || !questions)
       return res.json({ success: false });
     const quiz = await Quiz.create({
       name,
       description,
+      teacherId,   // ✅ ADD THIS
       questions
     });
 
