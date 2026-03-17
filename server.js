@@ -1548,25 +1548,30 @@ app.post("/api/submitExam", async (req, res) => {
       console.log("⚠ Empty answers detected (auto submission)");
     }
     // 🔎 FIND EXAM FROM FILE
-    // const exam = allExams.find(
-    //   e => Number(e.id) === Number(examId)
-    // );
     const exam = allExams.find(
         e => String(e.id) === String(examId)
       );
-    // ⭐ CHECK EXAM TIME
+          // ✅ ADD THIS (link exam support)
+      let quizExam = null;
+      if (!exam) {
+        try {
+          quizExam = await Quiz.findById(examId);
+        } catch (e) {
+          console.log("Quiz fetch error");
+        }
+      }
    // ⭐ Only check if exam ended
       if (exam.examDate && exam.endTime) {
-      
         const now = new Date();
         const end = new Date(`${exam.examDate}T${exam.endTime}`);
-      
         if (now > end) {
           console.log("⏰ Exam time ended but allowing submission");
         }
       }
+    // ✅ ADD THIS
+  const finalExam = exam || quizExam;
 // ======================================
-    if (!exam) {
+    if (!exam && !quizExam) {
       return res.status(400).json({
         success: false,
         message: "Exam not found"
@@ -1592,11 +1597,14 @@ app.post("/api/submitExam", async (req, res) => {
         message: "Student identification missing"
       });
     }
-
+    // ✅ ADD THIS (safe fallback for link exam)
+    const safeTeacherId = exam?.teacherId || quizExam?.teacherId || "";
     // ✅ CREATE SUBMISSION
     const submission = await ExamSubmission.create({
       schoolCode,
-      teacherId: exam.teacherId || "",
+      teacherId: exam?.teacherId || quizExam?.teacherId || "",
+      // teacherId: exam.teacherId || "",
+      // teacherId: safeTeacherId,          
       studentId,
       studentName,
       phone,
