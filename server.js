@@ -1378,12 +1378,12 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
     // ✅ FIX QUESTIONS (SUPPORT TEXT + IMAGE OPTIONS)
     const fixedQuestions = (meta.questions || []).map(q => ({
       question: q.question || "",
-      title: q.title || q.question || "",
+      // image: q.image || null,
       questionImage: q.questionImage || q.image || null,
-      // ✅ FIX OPTIONS
+
       options: (q.options || []).map(opt => {
         if (!opt) return "";
-    
+
         if (typeof opt === "string") {
           return { text: opt, image: null };
         }
@@ -1391,11 +1391,7 @@ app.post("/api/uploadExam", verifyToken, uploadExamPDF.single("pdf"), async (req
           text: opt.text || "",
           image: opt.image || null
         };
-      }),
-    
-      // ✅ ADD THESE 2 LINES (MOST IMPORTANT)
-      type: q.type || (q.options?.length > 0 ? "multiple" : "text"),
-      section: q.section || (q.options?.length > 0 ? "MCQs" : "General")
+      })
     }));
 
     const newExam = {
