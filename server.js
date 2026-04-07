@@ -1557,25 +1557,43 @@ app.post("/api/submitExam", async (req, res) => {
     }
     // 🔎 FIND EXAM FROM FILE
     const exam = allExams.find(
-        e => String(e.id) === String(examId)
-      );
-          // ✅ ADD THIS (link exam support)
-      let quizExam = null;
-      if (!exam) {
-        try {
-          quizExam = await Quiz.findById(examId);
-        } catch (e) {
-          console.log("Quiz fetch error");
-        }
+      e => String(e.id) === String(examId)
+    );
+    
+    // ✅ ADD THIS (link exam support)
+    let quizExam = null;
+    if (!exam) {
+      try {
+        quizExam = await Quiz.findById(examId);
+      } catch (e) {
+        console.log("Quiz fetch error");
       }
-   // ⭐ Only check if exam ended
-      if (exam.examDate && exam.endTime) {
-        const now = new Date();
-        const end = new Date(`${exam.examDate}T${exam.endTime}`);
-        if (now > end) {
-          console.log("⏰ Exam time ended but allowing submission");
-        }
+    }
+    
+    // ✅ ADD THIS (SAFE OBJECT)
+    const safeExam = exam || quizExam || {};    
+    // ⭐ Only check if exam ended
+    
+    // ✅ ADD THIS (PREVENT CRASH)
+    if (!exam && !quizExam) {
+      console.log("❌ No exam found, skipping exam time check");
+    }    
+    // ❌ OLD CODE (leave as it is — no remove)
+    if (exam && exam.examDate && exam.endTime) {
+      const now = new Date();
+      const end = new Date(`${exam.examDate}T${exam.endTime}`);
+      if (now > end) {
+        console.log("⏰ Exam time ended but allowing submission");
       }
+    }    
+    // ✅ ADD THIS (FOR LINK EXAM ALSO)
+    if (safeExam && safeExam.examDate && safeExam.endTime) {
+      const now = new Date();
+      const end = new Date(`${safeExam.examDate}T${safeExam.endTime}`);
+      if (now > end) {
+        console.log("⏰ (Safe) Exam time ended but allowing submission");
+      }
+    }
     // ✅ ADD THIS
   const finalExam = exam || quizExam;
 // ======================================
