@@ -271,27 +271,23 @@ const uploadProfilePhoto = multer({ storage: profileStorage });
 app.use("/profile_uploads", express.static(profileUploadDir));
 
 // ✅ /* ================= Upload teacher photo ================= */
-app.post("/api/teacher/uploadPhoto", async (req, res) => {
+app.post("/api/teacher/uploadPhoto", uploadProfilePhoto.single("photo"), async (req, res) => {
   try {
     const { teacherId, schoolCode } = req.body;
-    if (!req.files || !req.files.photo) {
+    if (!req.file) {
       return res.json({ success: false, message: "No file" });
     }
-    const file = req.files.photo;
-    const fileName = Date.now() + "_" + file.name;
-    const uploadPath = `uploads/${fileName}`;
-    await file.mv(uploadPath);
-    // ✅ save in DB
+    const photoUrl = `/profile_uploads/${req.file.filename}`;
     await Teacher.updateOne(
-      { _id: teacherId, schoolCode },
-      { photo: "/" + uploadPath }
+      { teacherId, schoolCode }, // 🔥 FIX (_id ❌ → teacherId ✅)
+      { photo: photoUrl }
     );
     res.json({
       success: true,
-      photo: "/" + uploadPath
+      photo: photoUrl
     });
   } catch (err) {
-    console.log(err);
+    console.log("UPLOAD ERROR:", err);
     res.json({ success: false });
   }
 });
