@@ -270,6 +270,32 @@ const profileStorage = multer.diskStorage({
 const uploadProfilePhoto = multer({ storage: profileStorage });
 app.use("/profile_uploads", express.static(profileUploadDir));
 
+// ✅ /* ================= Upload teacher photo ================= */
+app.post("/api/teacher/uploadPhoto", async (req, res) => {
+  try {
+    const { teacherId, schoolCode } = req.body;
+    if (!req.files || !req.files.photo) {
+      return res.json({ success: false, message: "No file" });
+    }
+    const file = req.files.photo;
+    const fileName = Date.now() + "_" + file.name;
+    const uploadPath = `uploads/${fileName}`;
+    await file.mv(uploadPath);
+    // ✅ save in DB
+    await Teacher.updateOne(
+      { _id: teacherId, schoolCode },
+      { photo: "/" + uploadPath }
+    );
+    res.json({
+      success: true,
+      photo: "/" + uploadPath
+    });
+  } catch (err) {
+    console.log(err);
+    res.json({ success: false });
+  }
+});
+// =====================================================================================
 /* ================= TEST ================= */
 app.get("/", (req, res) => {
   res.send("Kidzibooks API is running");
