@@ -583,10 +583,20 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     { expiresIn: "7d" }
   );
   // ✅ CHANGE THIS RESPONSE
+  // res.json({
+  //   token,
+  //   schoolName: school?.schoolName || "",
+  //   photo: teacher.photoBase64 || teacher.photo || "",
+  //   name: teacher.name || ""
+  // });
   res.json({
     token,
     schoolName: school?.schoolName || "",
-    photo: teacher.photoBase64 || teacher.photo || "",
+    photo: teacher.photoBase64 
+      ? teacher.photoBase64 
+      : teacher.photo 
+        ? `${req.protocol}://${req.get("host")}${teacher.photo}`
+        : "",
     name: teacher.name || ""
   });
 });
