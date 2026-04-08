@@ -1074,7 +1074,12 @@ app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
     res.json({
       teacher: {
         ...teacher._doc,
-        photo: teacher.photoBase64 || teacher.photo || ""
+        // photo: teacher.photoBase64 || teacher.photo || ""
+        photo: teacher.photoBase64 
+          ? teacher.photoBase64 
+          : teacher.photo 
+            ? `${req.protocol}://${req.get("host")}${teacher.photo}`
+            : ""
       }
     });
   } catch (err) {
