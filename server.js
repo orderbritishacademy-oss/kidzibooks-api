@@ -583,20 +583,10 @@ app.post("/api/auth/teacher-login", async (req, res) => {
     { expiresIn: "7d" }
   );
   // ✅ CHANGE THIS RESPONSE
-  // res.json({
-  //   token,
-  //   schoolName: school?.schoolName || "",
-  //   photo: teacher.photoBase64 || teacher.photo || "",
-  //   name: teacher.name || ""
-  // });
   res.json({
     token,
     schoolName: school?.schoolName || "",
-    photo: teacher.photoBase64 
-      ? teacher.photoBase64 
-      : teacher.photo 
-        ? `${req.protocol}://${req.get("host")}${teacher.photo}`
-        : "",
+    photo: teacher.photoBase64 || teacher.photo || "",
     name: teacher.name || ""
   });
 });
@@ -1049,7 +1039,7 @@ app.get("/api/student/ranking/:schoolCode/:stuClass", async (req, res) => {
     res.status(500).json({ msg: "Ranking fetch failed" });
   }
 });
-/* ================= GET STUDENT PROFILE ================= */
+/* ============================================================= GET STUDENT PROFILE ================= */
 app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
   try {
     const { schoolCode, studentId } = req.params;
@@ -1070,7 +1060,7 @@ app.get("/api/student/profile/:schoolCode/:studentId", async (req, res) => {
     res.status(500).json({ msg: "Profile load failed" });
   }
 });
-/* ================= GET TEACHER PROFILE ================= */
+/* ====================================================== GET TEACHER PROFILE ================= */
 app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
   try {
     const { schoolCode, teacherId } = req.params;
@@ -1084,12 +1074,7 @@ app.get("/api/teacher/profile/:schoolCode/:teacherId", async (req, res) => {
     res.json({
       teacher: {
         ...teacher._doc,
-        // photo: teacher.photoBase64 || teacher.photo || ""
-        photo: teacher.photoBase64 
-          ? teacher.photoBase64 
-          : teacher.photo 
-            ? `${req.protocol}://${req.get("host")}${teacher.photo}`
-            : ""
+        photo: teacher.photoBase64 || teacher.photo || ""
       }
     });
   } catch (err) {
