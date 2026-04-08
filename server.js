@@ -271,26 +271,26 @@ const uploadProfilePhoto = multer({ storage: profileStorage });
 app.use("/profile_uploads", express.static(profileUploadDir));
 
 // ✅ /* ================= Upload teacher photo ================= */
-app.post("/api/teacher/uploadPhoto", uploadProfilePhoto.single("photo"), async (req, res) => {
-  try {
-    const { teacherId, schoolCode } = req.body;
-    if (!req.file) {
-      return res.json({ success: false, message: "No file" });
-    }
-    const photoUrl = `/profile_uploads/${req.file.filename}`;
-    await Teacher.updateOne(
-      { teacherId, schoolCode }, // 🔥 FIX (_id ❌ → teacherId ✅)
-      { photo: photoUrl }
-    );
-    res.json({
-      success: true,
-      photo: photoUrl
-    });
-  } catch (err) {
-    console.log("UPLOAD ERROR:", err);
-    res.json({ success: false });
-  }
-});
+// app.post("/api/teacher/uploadPhoto", uploadProfilePhoto.single("photo"), async (req, res) => {
+//   try {
+//     const { teacherId, schoolCode } = req.body;
+//     if (!req.file) {
+//       return res.json({ success: false, message: "No file" });
+//     }
+//     const photoUrl = `/profile_uploads/${req.file.filename}`;
+//     await Teacher.updateOne(
+//       { teacherId, schoolCode }, // 🔥 FIX (_id ❌ → teacherId ✅)
+//       { photo: photoUrl }
+//     );
+//     res.json({
+//       success: true,
+//       photo: photoUrl
+//     });
+//   } catch (err) {
+//     console.log("UPLOAD ERROR:", err);
+//     res.json({ success: false });
+//   }
+// });
 // =====================================================================================
 /* ================= TEST ================= */
 app.get("/", (req, res) => {
